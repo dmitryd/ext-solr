@@ -14,13 +14,11 @@ namespace ApacheSolrForTypo3\Solr\System\Service;
  * The TYPO3 project - inspiring people to share!
  */
 
-use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationManager;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
 use TYPO3\CMS\Core\TypoScript\TypoScriptService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Configuration\ConfigurationManager as ExtbaseConfigurationManager;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
-use TYPO3\CMS\Extbase\Service\FlexFormService;
+use TYPO3\CMS\Core\Service\FlexFormService;
 
 /**
  * Service to ease work with configurations.
@@ -132,9 +130,12 @@ class ConfigurationService
 
             $fieldName = $filter['field'];
             $fieldValue = $filter['value'];
-            $quotedFieldValue = '"' . str_replace('"', '\"', $fieldValue) . '"';
 
-            $filterConfiguration[] =  $fieldName . ':' . $quotedFieldValue;
+            if (!is_numeric($fieldValue)) {
+                $fieldValue = '"' . str_replace('"', '\"', $fieldValue) . '"';
+            }
+
+            $filterConfiguration[] =  $fieldName . ':' . $fieldValue;
         }
         return $filterConfiguration;
     }

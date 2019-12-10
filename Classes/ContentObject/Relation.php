@@ -26,6 +26,7 @@ namespace ApacheSolrForTypo3\Solr\ContentObject;
 
 use ApacheSolrForTypo3\Solr\System\Language\FrontendOverlayService;
 use ApacheSolrForTypo3\Solr\System\TCA\TCAService;
+use ApacheSolrForTypo3\Solr\Util;
 use Doctrine\DBAL\Driver\Statement;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -138,18 +139,13 @@ class Relation
             return [];
         }
 
-        /**
-         * @todo this can be removed when TYPO3 8 support is dropped since overlays are then also stored in the same
-         * table for pages
-         */
-        $overlayTable = $this->frontendOverlayService->getOverlayTable($table, $field);
         $overlayUid = $this->frontendOverlayService->getUidOfOverlay($table, $field, $uid);
-        $fieldTCA = $this->tcaService->getConfigurationForField($overlayTable, $field);
+        $fieldTCA = $this->tcaService->getConfigurationForField($table, $field);
 
         if (isset($fieldTCA['config']['MM']) && trim($fieldTCA['config']['MM']) !== '') {
-            $relatedItems = $this->getRelatedItemsFromMMTable($overlayTable, $overlayUid, $fieldTCA);
+            $relatedItems = $this->getRelatedItemsFromMMTable($table, $overlayUid, $fieldTCA);
         } else {
-            $relatedItems = $this->getRelatedItemsFromForeignTable($overlayTable, $overlayUid, $fieldTCA, $parentContentObject);
+            $relatedItems = $this->getRelatedItemsFromForeignTable($table, $overlayUid, $fieldTCA, $parentContentObject);
         }
 
         return $relatedItems;
@@ -203,7 +199,7 @@ class Relation
 
                 return $this->getRelatedItems($contentObject);
             } else {
-                if ($GLOBALS['TSFE']->sys_language_uid > 0) {
+                if (Util::getLanguageUid() > 0) {
                     $record = $this->frontendOverlayService->getOverlay($foreignTableName, $record);
                 }
                 $relatedItems[] = $record[$foreignTableLabelField];
@@ -307,7 +303,7 @@ class Relation
         ContentObjectRenderer $parentContentObject,
         $foreignTableName = ''
     ) {
-        if ($GLOBALS['TSFE']->sys_language_uid > 0 && !empty($foreignTableName)) {
+        if (Util::getLanguageUid() > 0 && !empty($foreignTableName)) {
             $relatedRecord = $this->frontendOverlayService->getOverlay($foreignTableName, $relatedRecord);
         }
 

@@ -154,7 +154,7 @@ class Faceting implements Modifier, SearchRequestAware
             $tag = $this->getFilterTag($facetConfiguration, $keepAllFacetsOnSelection);
             $filterParts = $this->getFilterParts($facetConfiguration, $facetName, $filterValues);
             $operator = ($facetConfiguration['operator'] === 'OR') ? ' OR ' : ' AND ';
-            $facetFilters[] = $tag . '(' . implode($operator, $filterParts) . ')';
+            $facetFilters[$facetName] = $tag . '(' . implode($operator, $filterParts) . ')';
         }
 
         return $facetFilters;
@@ -171,7 +171,7 @@ class Faceting implements Modifier, SearchRequestAware
     protected function getFilterTag($facetConfiguration, $keepAllFacetsOnSelection)
     {
         $tag = '';
-        if ($facetConfiguration['keepAllOptionsOnSelection'] == 1 || $keepAllFacetsOnSelection) {
+        if ($facetConfiguration['keepAllOptionsOnSelection'] == 1 || $facetConfiguration['addFieldAsTag'] == 1 || $keepAllFacetsOnSelection) {
             $tag = '{!tag=' . addslashes($facetConfiguration['field']) . '}';
         }
 

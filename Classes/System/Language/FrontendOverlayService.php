@@ -27,7 +27,6 @@ namespace ApacheSolrForTypo3\Solr\System\Language;
 
 use ApacheSolrForTypo3\Solr\System\TCA\TCAService;
 use ApacheSolrForTypo3\Solr\Util;
-use Doctrine\DBAL\Driver\Statement;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
@@ -69,30 +68,12 @@ class FrontendOverlayService {
     public function getOverlay($tableName, $record)
     {
         if ($tableName === 'pages') {
-            return $this->tsfe->sys_page->getPageOverlay($record, $this->tsfe->sys_language_uid);
+            // @extensionScannerIgnoreLine
+            return $this->tsfe->sys_page->getPageOverlay($record, Util::getLanguageUid());
         }
 
-        return $this->tsfe->sys_page->getRecordOverlay($tableName, $record, $this->tsfe->sys_language_uid);
-    }
-
-    /**
-     * Returns the overlay table for a certain table.
-     *
-     * @param string $table
-     * @param string $field
-     * @return string
-     */
-    public function getOverlayTable(string $table, string $field) : string
-    {
-        // pages has a special overlay table constriction
-        if ($this->tsfe->sys_language_uid > 0
-            && $table === 'pages'
-            && $this->tcaService->getHasConfigurationForField('pages_language_overlay', $field)
-            && Util::getIsTYPO3VersionBelow9()) {
-            return 'pages_language_overlay';
-        }
-
-        return $table;
+        // @extensionScannerIgnoreLine
+        return $this->tsfe->sys_page->getRecordOverlay($tableName, $record, Util::getLanguageUid());
     }
 
     /**
@@ -107,18 +88,11 @@ class FrontendOverlayService {
     public function getUidOfOverlay($table, $field, $uid)
     {
         // when no language is set at all we do not need to overlay
-        if (!isset($this->tsfe->sys_language_uid)) {
+        if (Util::getLanguageUid() === null) {
             return $uid;
         }
         // when no language is set we can return the passed recordUid
-        if (!$this->tsfe->sys_language_uid > 0) {
-            return $uid;
-        }
-        // when no TCA configured for pages_language_overlay's field, then use original record Uid
-        // @todo this can be dropped when TYPO3 8 compatibility is dropped
-        $translatedInPagesLanguageOverlayAndNoTCAPresent = Util::getIsTYPO3VersionBelow9() &&
-            !$this->tcaService->getHasConfigurationForField('pages_language_overlay', $field);
-        if ($table === 'pages' && $translatedInPagesLanguageOverlayAndNoTCAPresent) {
+        if (!(Util::getLanguageUid() > 0)) {
             return $uid;
         }
 

@@ -38,18 +38,15 @@ class SystemDomainRepository extends AbstractRepository
     /**
      * Retrieves sys_domain records for a set of root page ids.
      *
+     * @deprecated This class is deprecated since EXT:solr 10 and will be removed in EXT:solr 11 since then only the site handling configuration will be supported
      * @param array $rootPageIds
      * @return mixed
      */
     public function findDomainRecordsByRootPagesIds(array $rootPageIds = [])
     {
+        trigger_error('solr:deprecation: You are using EXT:solr without sitehandling. This setup is deprecated and will be removed in EXT:solr 11', E_USER_DEPRECATED);
 
-        if (Util::getIsTYPO3VersionBelow9()) {
-            //@todo this can be dropped when support of TYPO3 8 is dropped
-            $resultTmp = $this->getDomainRecordsByRootPageIdsFor8($rootPageIds);
-        } else {
-            $resultTmp = $this->getDomainRecordsByRootPageIdsFor9($rootPageIds);
-        }
+        $resultTmp = $this->getDomainRecordsByRootPageIds($rootPageIds);
 
         $result = [];
         foreach ($resultTmp as $key => $row) {
@@ -59,34 +56,12 @@ class SystemDomainRepository extends AbstractRepository
     }
 
     /**
-     * Fetches the domain records for TYPO3 8.
-     *
-     * @todo this can be dropped when support of TYPO3 8 is dropped
-     * @param array $rootPageIds
-     * @return array
-     */
-    protected function getDomainRecordsByRootPageIdsFor8(array $rootPageIds = [])
-    {
-        $queryBuilder = $this->getQueryBuilder();
-
-        return $queryBuilder->select('uid', 'pid')
-            ->from($this->table)
-            ->where(
-                $queryBuilder->expr()->in('pid', $rootPageIds),
-                $queryBuilder->expr()->eq('redirectTo', '\'\'')
-            )->groupBy('uid', 'pid', 'sorting')
-            ->orderBy('pid')
-            ->addOrderBy('sorting')
-            ->execute()->fetchAll();
-    }
-
-    /**
      * Fetches the domain records for TYPO3 9.
      *
      * @param array $rootPageIds
      * @return array
      */
-    protected function getDomainRecordsByRootPageIdsFor9(array $rootPageIds = [])
+    protected function getDomainRecordsByRootPageIds(array $rootPageIds = [])
     {
         $queryBuilder = $this->getQueryBuilder();
 

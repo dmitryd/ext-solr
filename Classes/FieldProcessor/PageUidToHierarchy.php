@@ -24,9 +24,9 @@ namespace ApacheSolrForTypo3\Solr\FieldProcessor;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\Page\PageRepository;
+use TYPO3\CMS\Core\Utility\RootlineUtility;
 
 /**
  * This Processor takes a PID, and resolves its rootline in solr notation.
@@ -103,9 +103,12 @@ class PageUidToHierarchy extends AbstractHierarchyProcessor implements FieldProc
     {
         $rootlinePageIds = [];
 
-            /** @var $pageSelector PageRepository */
-        $pageSelector = GeneralUtility::makeInstance(PageRepository::class);
-        $rootline = $pageSelector->getRootLine($pageId, (string)$mountPoint);
+        $rootlineUtility = GeneralUtility::makeInstance(RootlineUtility::class, $pageId, $mountPoint);
+        try {
+            $rootline = $rootlineUtility->get();
+        } catch (\RuntimeException $e) {
+            $rootline = [];
+        }
 
         foreach ($rootline as $page) {
             if (Site::isRootPage($page)) {

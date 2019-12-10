@@ -28,10 +28,8 @@ namespace ApacheSolrForTypo3\Solr\Tests\Integration\Controller;
 use ApacheSolrForTypo3\Solr\IndexQueue\FrontendHelper\PageFieldMappingIndexer;
 use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationManager;
 use ApacheSolrForTypo3\Solr\Controller\SearchController;
-use ApacheSolrForTypo3\Solr\Util;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager as ExtbaseConfigurationManager;
 use TYPO3\CMS\Extbase\Mvc\Exception\StopActionException;
 use TYPO3\CMS\Extbase\Mvc\Request;
@@ -39,9 +37,8 @@ use TYPO3\CMS\Extbase\Mvc\Web\Response;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\Object\ObjectManagerInterface;
 use TYPO3\CMS\Extbase\Service\EnvironmentService;
-use TYPO3\CMS\Fluid\View\Exception\InvalidTemplateResourceException;
+use TYPO3Fluid\Fluid\View\Exception\InvalidTemplateResourceException;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Frontend\Page\PageGenerator;
 
 /**
  * Integration testcase to test for the SearchController
@@ -591,7 +588,9 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $this->assertContains('Found 8 results', $resultPage1, 'Assert to find 8 results without faceting');
         $this->assertContains('facet-type-hierarchy', $resultPage1, 'Did not render hierarchy facet in the response');
         $this->assertContains('data-facet-item-value="/1/2/"', $resultPage1, 'Hierarchy facet item did not contain expected data item');
-        $this->assertContains('tx_solr%5Bq%5D=%2A&amp;tx_solr%5Bfilter%5D%5B0%5D=pageHierarchy%3A%2F1%2F2%2F', $resultPage1, 'Result page did not contain hierarchical facet link');
+
+        $this->assertContains('tx_solr%5Bfilter%5D%5B0%5D=pageHierarchy%3A%2F1%2F2%2F&amp;tx_solr%5Bq%5D=%2A', $resultPage1, 'Result page did not contain hierarchical facet link');
+
     }
 
     /**
@@ -617,7 +616,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $this->assertContains('Found 1 result', $resultPage1, 'Assert to only find one result after faceting');
         $this->assertContains('facet-type-hierarchy', $resultPage1, 'Did not render hierarchy facet in the response');
         $this->assertContains('data-facet-item-value="/1/2/"', $resultPage1, 'Hierarchy facet item did not contain expected data item');
-        $this->assertContains('tx_solr%5Bq%5D=%2A&amp;tx_solr%5Bfilter%5D%5B0%5D=pageHierarchy%3A%2F1%2F2%2F', $resultPage1, 'Result page did not contain hierarchical facet link');
+        $this->assertContains('tx_solr%5Bfilter%5D%5B0%5D=pageHierarchy%3A%2F1%2F2%2F&amp;tx_solr%5Bq%5D=%2A', $resultPage1, 'Result page did not contain hierarchical facet link');
     }
 
     /**
@@ -629,9 +628,8 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
 
         $this->indexPages([1, 2, 3]);
-
         // we should have 3 documents in solr
-        $solrContent = file_get_contents('http://localhost:8999/solr/core_en/select?q=*:*');
+        $solrContent = file_get_contents($this->getSolrConnectionUriAuthority() . '/solr/core_en/select?q=*:*');
         $this->assertContains('"numFound":3', $solrContent, 'Could not index document into solr');
 
         // but when we facet on the categoryPaths:/Men/Shoes \/ Socks/ we should only have one result since the others
@@ -715,6 +713,10 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      */
     public function frontendWillRenderErrorMessageForSolrNotAvailableAction()
     {
+        $this->applyUsingErrorControllerForCMS9andAbove();
+
+        // set a wrong port where no solr is running
+        $this->writeDefaultSolrTestSiteConfigurationForHostAndPort('http','localhost', 4711);
         $this->importDataSetFromFixture('can_render_error_message_when_solr_unavailable.xml');
         $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
 
@@ -745,6 +747,9 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      */
     public function frontendWillForwardsToErrorActionWhenSolrEndpointIsNotAvailable($action, $getArguments)
     {
+        $this->applyUsingErrorControllerForCMS9andAbove();
+        // set a wrong port where no solr is running
+        $this->writeDefaultSolrTestSiteConfigurationForHostAndPort('http','localhost', 4711);
         $this->expectException(StopActionException::class);
         $this->expectExceptionMessage('forward');
         $this->expectExceptionCode(1476045801);
@@ -1009,12 +1014,13 @@ class SearchControllerTest extends AbstractFrontendControllerTest
     public function canRenderDetailAction()
     {
         $request = $this->getPreparedRequest('Search', 'detail');
-        $request->setArgument('documentId', '23c51a0d5cf548afecc043a7068902e8f82a22a0/pages/1/0/0/0');
+        $request->setArgument('documentId', '002de2729efa650191f82900ea02a0a3189dfabb/pages/1/0/0/0');
 
         $this->importDataSetFromFixture('can_render_search_controller.xml');
         $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
 
         $this->indexPages([1, 2]);
+
         $this->searchController->processRequest($request, $this->searchResponse);
         $this->assertContains("Products", $this->searchResponse->getContent());
     }
@@ -1159,16 +1165,11 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      */
     protected function fakeBackendUserLoggedInInFrontend()
     {
-        if (Util::getIsTYPO3VersionBelow9()) {
-            $GLOBALS['TSFE']->beUserLogin = true;
-
-        } else {
-            /** @var  $context \TYPO3\CMS\Core\Context\Context::class */
-            $context = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Context\Context::class);
-            $userAspect = $this->getMockBuilder(\TYPO3\CMS\Core\Context\UserAspect::class)->setMethods([])->getMock();
-            $userAspect->expects($this->any())->method('get')->with('isLoggedIn')->willReturn(true);
-            $context->setAspect('backend.user', $userAspect);
-        }
+        /** @var  $context \TYPO3\CMS\Core\Context\Context::class */
+        $context = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Context\Context::class);
+        $userAspect = $this->getMockBuilder(\TYPO3\CMS\Core\Context\UserAspect::class)->setMethods([])->getMock();
+        $userAspect->expects($this->any())->method('get')->with('isLoggedIn')->willReturn(true);
+        $context->setAspect('backend.user', $userAspect);
     }
 
     /**

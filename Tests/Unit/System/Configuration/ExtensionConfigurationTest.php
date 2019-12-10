@@ -37,6 +37,12 @@ use ApacheSolrForTypo3\Solr\Tests\Unit\UnitTest;
 class ExtensionConfigurationTest extends UnitTest
 {
 
+
+    public function setUp()
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['solr'] = [];
+    }
+
     /**
      * @test
      */
@@ -118,5 +124,18 @@ class ExtensionConfigurationTest extends UnitTest
             ['allowSelfSignedCertificates' => 1]
         );
         $this->assertTrue($configurationUseConfigurationAllowSelfSignedCertificates->getIsSelfSignedCertificatesEnabled());
+    }
+
+    /**
+     * @test
+     */
+    public function testIsAllowLegacySiteModeIsImplemented()
+    {
+        $defaultConfiguration = new ExtensionConfiguration();
+        $this->assertFalse($defaultConfiguration->getIsAllowLegacySiteModeEnabled());
+        $configurationUseConfigurationAllowSelfSignedCertificates = new ExtensionConfiguration(
+            ['allowLegacySiteMode' => 1]
+        );
+        $this->assertTrue($configurationUseConfigurationAllowSelfSignedCertificates->getIsAllowLegacySiteModeEnabled());
     }
 }

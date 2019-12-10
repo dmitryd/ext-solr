@@ -25,6 +25,7 @@ namespace ApacheSolrForTypo3\Solr\Tests\Unit;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\ConnectionManager;
+use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
 use ApacheSolrForTypo3\Solr\SolrService;
 use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationManager;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
@@ -37,6 +38,7 @@ use ApacheSolrForTypo3\Solr\System\Solr\Parser\StopWordParser;
 use ApacheSolrForTypo3\Solr\System\Solr\Parser\SynonymParser;
 use ApacheSolrForTypo3\Solr\System\Solr\Service\SolrAdminService;
 use ApacheSolrForTypo3\Solr\System\Solr\SolrConnection;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\TypoScript\TemplateService;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
@@ -70,6 +72,11 @@ class ConnectionManagerTest extends UnitTest
     protected $pageRepositoryMock;
 
     /**
+     * @var SiteRepository
+     */
+    protected $siteRepositoryMock;
+
+    /**
      * Set up the connection manager test
      *
      * @return void
@@ -82,7 +89,7 @@ class ConnectionManagerTest extends UnitTest
         /** @var $GLOBALS ['TSFE']->tmpl  \TYPO3\CMS\Core\TypoScript\TemplateService */
         $GLOBALS['TSFE']->tmpl = $this->getDumbMock(TemplateService::class, ['linkData']);
         $GLOBALS['TSFE']->tmpl->init();
-        $GLOBALS['TSFE']->tmpl->getFileName_backPath = PATH_site;
+        $GLOBALS['TSFE']->tmpl->getFileName_backPath = Environment::getPublicPath() . '/';
         $GLOBALS['TSFE']->tmpl->setup['config.']['typolinkEnableLinksAcrossDomains'] = 0;
         $GLOBALS['TSFE']->tmpl->setup['plugin.']['tx_solr.']['solr.']['host'] = 'localhost';
         $GLOBALS['TSFE']->tmpl->setup['plugin.']['tx_solr.']['solr.']['port'] = '8999';
@@ -94,10 +101,11 @@ class ConnectionManagerTest extends UnitTest
         $this->logManagerMock = $this->getDumbMock(SolrLogManager::class);
         $this->languageRepositoryMock = $this->getDumbMock(SystemLanguageRepository::class);
         $this->pageRepositoryMock = $this->getDumbMock(PagesRepository::class);
+        $this->siteRepositoryMock = $this->getDumbMock(SiteRepository::class);
 
         $this->configurationManager = new ConfigurationManager();
         $this->connectionManager = $this->getMockBuilder(ConnectionManager::class)
-            ->setConstructorArgs([$this->languageRepositoryMock, $this->pageRepositoryMock, $this->logManagerMock])
+            ->setConstructorArgs([$this->languageRepositoryMock, $this->pageRepositoryMock, $this->siteRepositoryMock])
             ->setMethods(['getSolrConnectionForNodes'])
             ->getMock();
     }

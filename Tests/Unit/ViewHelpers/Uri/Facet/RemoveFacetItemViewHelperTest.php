@@ -27,7 +27,7 @@ namespace ApacheSolrForTypo3\Solr\Test\ViewHelpers\Uri\Facet;
 
 use ApacheSolrForTypo3\Solr\Domain\Search\Uri\SearchUriBuilder;
 use ApacheSolrForTypo3\Solr\ViewHelpers\Uri\Facet\RemoveFacetItemViewHelper;
-use TYPO3\CMS\Fluid\Core\Rendering\RenderingContextInterface;
+use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
 /**
  * @author Timo Hund <timo.hund@dkd.de>
@@ -51,6 +51,7 @@ class RemoveFacetItemViewHelperTest extends AbstractFacetItemViewHelperTest
             // we expected that the getRemoveFacetValueUri will be called on the searchUriBuilder in the end.
         $searchUriBuilderMock->expects($this->once())->method('getRemoveFacetValueUri')->with($facet->getResultSet()->getUsedSearchRequest(), 'Color', 'red');
         $viewHelper->injectSearchUriBuilder($searchUriBuilderMock);
+        // @extensionScannerIgnoreLine
         $viewHelper->setArguments(['facet' => $facet, 'facetItem' => $facet->getOptions()->getByPosition(0)]);
         $viewHelper->render();
     }

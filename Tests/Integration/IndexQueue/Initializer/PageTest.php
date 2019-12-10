@@ -27,7 +27,7 @@ namespace ApacheSolrForTypo3\Solr\Tests\Integration\IndexQueue\Initializer;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
 use ApacheSolrForTypo3\Solr\IndexQueue\Initializer\Page;
 use ApacheSolrForTypo3\Solr\IndexQueue\Queue;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -56,6 +56,7 @@ class PageTest extends IntegrationTest
     {
         parent::setUp();
         $this->setUpBackendUserFromFixture(1);
+        $this->writeDefaultSolrTestSiteConfiguration();
         $this->pageInitializer = GeneralUtility::makeInstance(Page::class);
         $this->indexQueue = GeneralUtility::makeInstance(Queue::class);
     }
@@ -232,7 +233,7 @@ class PageTest extends IntegrationTest
         $this->assertTrue($this->indexQueue->containsItem('pages', 14));
         $this->assertTrue($this->indexQueue->containsItem('pages', 24));
 
-        $this->assertTrue($this->indexQueue->containsItem('pages', 2));
+        $this->assertTrue($this->indexQueue->containsItem('pages', 111));
         $this->assertTrue($this->indexQueue->containsItem('pages', 34));
 
         $items = $this->indexQueue->getItems('pages', 24);
@@ -243,9 +244,6 @@ class PageTest extends IntegrationTest
         $secondItem = $items[1];
         $this->assertSame('24-34-1', $secondItem->getMountPointIdentifier());
     }
-
-
-
 
     /**
      * Check if invalid mount page is ignored and messages were added to the flash

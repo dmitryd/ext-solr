@@ -6,16 +6,7 @@
 .. include:: ../Includes.txt
 
 
-.. _conf-logging:
-
-
-.. raw:: latex
-
-    \newpage
-
-.. raw:: pdf
-
-   PageBreak
+.. _releases-9:
 
 ===========================
 Apache Solr for TYPO3 9.0.0
@@ -23,7 +14,7 @@ Apache Solr for TYPO3 9.0.0
 
 We are happy to release EXT:solr 9.0.0. The focus of EXT:solr 9.0.0 was, to support the latest version of Apache Solr (7.6.0) and to drop the usage of the solrphpclient and use the solarium php API instead.
 
-**Important**: This version is installable with TYPO3 9 LTS, but does **not** support all features of TYPO3 9 yet. Especially the site handling needs further development in EXT:solr to fully support it with TYPO3 9 LTS. Since the development budget is limited at one side and we have other project requests at the other side we could spend less time on the development of EXT:solr by the end of the year. If you want to support us please consider to sponsor us in 2019.
+**Important**: This version is installable with TYPO3 9 LTS, but does **not** support all features of TYPO3 9 yet. Especially the site handling needs further development in EXT:solr to fully support it with TYPO3 9 LTS. Beside the open tasks in EXT:solr there are also parts left in the TYPO3 core (e.g. when using language fallbacks). In the next release of EXT:solr we want to improve the integration with the site management in TYPO3. Since the development budget is limited at one side and we have other project requests at the other side we could spend less time on the development of EXT:solr by the end of the year. If you want to support us please consider to sponsor us in 2019.
 
 New in this release
 ===================
@@ -67,7 +58,7 @@ In the future we want to get rid of redundant code and use the API where we can 
 TYPO3 9 compatibility
 ---------------------
 
-The current release is installable and useable with TYPO3 9 LTS but not all features are supported.
+The current release is installable and useable with TYPO3 9 LTS **but not all features** are supported.
 
 Currently it is supported to:
 
@@ -113,20 +104,20 @@ With a separation of read and write connections this is now possible. With these
 
 The new setup can be configured like that:
 
-```
-plugin.tx_solr.solr {
-        read {
-            scheme = https
-            host   = 127.0.0.1
-            port   = 8983
-            path   = /solr/core_en/
-        }
-        write < .read
-        write {
-            port   = 8984
-        }
-}
-```
+::
+
+    plugin.tx_solr.solr {
+            read {
+                scheme = https
+                host   = 127.0.0.1
+                port   = 8983
+                path   = /solr/core_en/
+            }
+            write < .read
+            write {
+                port   = 8984
+            }
+    }
 
 For compatibility reasons EXT:solr is falling back to ```plugin.tx_solr.solr.*``` when nothing is configured here:
 
@@ -154,29 +145,41 @@ Thanks to Marc Bastian Heinrichs for creating a patch for that.
 
 * https://github.com/TYPO3-Solr/ext-solr/pull/2194
 
+
+Allow to configure additionalExcludeTags for option facets
+----------------------------------------------------------
+
+When you want to exclude facets from the counts of another facets, Apache Solr uses tags and excludeTags to realize that.
+
+With the setting ```additionalExcludeTags``` you can add custom exclude tags for a facet and ```addFieldAsTag``` allows you, to force the creation of a tag for a certain facet.
+
+Thanks to Marc Bastian Heinrichs for creating a patch for that and to in2code for paying for the finalization and documentation.
+
+* https://github.com/TYPO3-Solr/ext-solr/issues/2195
+
+
 Bugfixes
 ========
 
 * https://github.com/TYPO3-Solr/ext-solr/pull/2048 Fixes a warning in the TranslateViewHelper
 * https://github.com/TYPO3-Solr/ext-solr/pull/2052 Use copy instead of reference in the TypoScript template
 * https://github.com/TYPO3-Solr/ext-solr/pull/2053 Unify multiple whitespaces to a single whitespace
-
+* https://github.com/TYPO3-Solr/ext-solr/pull/2245 KeepAllFacetsOnSelection is not evaluated when KeepAllOptionsOnSelection is used
 
 Migration from EXT:solr 8.1.0 to EXT:solr 9.0.0
 ===============================================
 
 * We ship Apache Solr 7.5.0, you need to install that Version with our configSet.
 * The argument "hasSearched" was removed from the searchAction and is no longer passed. You can now retrieve this
-information by calling "SearchResultSet::getHasSearch" or "{resultSet.hasSearched}" in the FLUID template.
-
-When you access this argument in your FLUID Template, you need to change that as well.
-
+  information by calling "SearchResultSet::getHasSearch" or "{resultSet.hasSearched}" in the FLUID template.
+  When you access this argument in your FLUID Template, you need to change that as well.
 * EXT:solr 9 differs between read and write connections now. As fallback the old configuration is still supported and used for reading and writing.
-Nevertheless you need to re-initialize the solr connections that the data in the registry is rewritten. If you want to make use of the new configuration
-you can configure the connections like that:
+  Nevertheless you need to re-initialize the solr connections that the data in the registry is rewritten. If you want to make use of the new configuration
+  you can configure the connections like that:
 
-```
-plugin.tx_solr.solr {
+::
+
+    plugin.tx_solr.solr {
         read {
             scheme = https
             host   = 127.0.0.1
@@ -187,10 +190,7 @@ plugin.tx_solr.solr {
         write {
             port   = 8984
         }
-}
-```
-
-
+    }
 
 Removed Code
 ============
@@ -220,128 +220,60 @@ awesome community. Here are the contributors to this release.
 
 (patches, comments, bug reports, reviews, ... in alphabetical order)
 
-* Andreas Lappe
+* Aljoscha Weber
 * Benni Mack
-* Florian Schöppe
-* Frans Saris
+* Felix Nagel
+* Florian Wessels
+* Helmut Hummel
 * Jens Jacobsen
 * Marc Bastian Heinrichs
-* Markus Friedrich
-* Michael Telgkamp
-* Olivier Dobberkau
+* Patrick Gaumond
 * Rafael Kähm
-* Rémy DANIEL
-* Sascha Egerer
-* Thomas Löffler
-* Timo Hund
+* Sasche Egerer
 * Thomas Hohn
+* Timo Hund
 
-Also a big thanks to our partners that have joined the EB2018 program:
+Also a big thanks to our partners that have joined the EB2019 program:
 
-* 4eyes GmbH
-* Albervanderveen
-* Agentur Frontal AG
-* AlrweNWR Internet BV
-* Amedick & Sommer
-* AUSY SA
-* BARDEHLE PAGENBERG Partnerschaft mbH
-* Bibus AG
+* Amedick & Sommer Neue Medien GmbH
+* BIBUS AG Group
 * Bitmotion GmbH
-* bgm Websolutions GmbH
-* bplusd interactive GmbH
-* Cast Iron Coding, Inc
-* Centre de gestion de la Fonction Publique Territoriale du Nord (Siège)
-* chiliSCHARF Kommunikationsagentur e.U.
-* Citkomm services GmbH
-* Cobytes GmbH
-* Columbus Interactive GmbH
-* Consulting Piezunka und Schamoni - Information Technologies GmbH
-* Cows Online GmbH
-* creativ clicks GmbH
-* DACHCOM.DIGITAL AG
-* Deutsches Literaturarchiv Marbach
-* E-Magineurs
-* Evangelische Stiftung Alsterdorf
-* food media Frank Wörner
-* Fachhochschule für öffentliche Verwaltung NRW
-* fixpunkt werbeagentur gmbh
-* FLOWSITE GmbH
-* FTI Touristik GmbH
-* GAYA - La Nouvelle Agence
+* CS2 AG
 * Gernot Leitgab
 * Getdesigned GmbH
 * Hirsch & Wölfl GmbH
-* Hochschule Furtwangen
-* ijuice Agentur GmbH
 * ITK Rheinland
-* Image Transfer GmbH
-* JUNGMUT Communications GmbH
-* Kreis Coesfeld
-* Landeskriminalamt Thüringen
-* Linnea Rådgivning
-* LINGNER CONSULTING NEW MEDIA GMBH
-* LOUIS INTERNET GmbH
-* L.N. Schaffrath DigitalMedien GmbH
-* l'Université Paris-Dauphine
-* Marketing Factory Consulting GmbH
-* MEDIA::ESSENZ
-* Mehr Demokratie e.V.
-* mehrwert intermediale kommunikation GmbH
-* Mercedes AMG GmbH
-* nullacht15 GmbH
-* Petz & Co
-* pietzpluswild GmbH
-* pixelcreation GmbH
-* plan.net
-* Pluswerk AG
-* POCO Service AG
-* polargold GmbH
-* Pottkinder GmbH
-* PROVITEX GmbH
-* Publicis Pixelpark
-* punkt.de GmbH
-* PROFILE MEDIA GmbG
-* Q3i GmbH & Co. KG
-* ressourcenmangel an der panke GmbH
-* RKW Rationalisierungs- und Innovationszentrum der Deutschen Wirtschaft e. V.
-* rms. relationship marketing solutions GmbH
-* Roza Sancken
-* sesamnet GmbH
-* Site'nGo
-* SIWA Online GmbH
-* snowflake productions gmbh
-* Stadt Brandenburg an der Havel
-* Studio B12 GmbH
-* systime
-* SYZYGY Deutschland GmbH
-* Talleux & Zöllner GbR
+* Kassenärztliche Vereinigung Bayerns (KZVB)
 * TOUMORO
-* THE BRETTINGHAMS GmbH
-* TWT Interactive GmbH
-* T-Systems Multimedia Solutions GmbH
-* Typoheads GmbH
-* Q3i GmbH
-* Ueberbit GmbH
-* WACON Internet GmbH
-* webconsulting business services gmbh
-* wow! solution
-* zdreicon GmbH
-* zimmer7 GmbH
+* Ueberbit Gmbh
+* XIMA MEDIA GmbH
+* b13 GmbH
+* bgm business websolutions GmbH & Co KG
+* datamints GmbH
+* medien.de mde GmbH
+* mehrwert intermediale kommunikation GmbH
+* mellowmessage GmbH
+* plan2net GmbH
+* punkt.de GmbH
 
-Special thanks to our premium EB 2018 partners:
+Special thanks to our premium EB 2019 partners:
 
-* b13 http://www.b13.de/
-* dkd http://www.dkd.de/
-* Image Transfer GmbH https://www.image-transfer.de/
-* jweiland.net http://www.jweiland.net/
-* Sitegeist http://www.sitegeist.de/
+* jweiland.net
+* sitegeist media solutions GmbH
+
+
+In addition i want to thank Markus Kalkbrenner and the whole solarium team for the support.
 
 Thanks to everyone who helped in creating this release!
 
 Outlook
 =======
 
-In the next release, we want to focus on the move to solarium and the support of the latest Apache Solr version.
+In the next release we will drop the support of TYPO3 8 and focus on the integration into TYPO39. Depending on the funding we would like to support
+the integration into the TYPO3 site management and want to allow to configure you Solr site with the TYPO3 site management module.
+
+With the move to the solarium php api, we take the first step of the integration. In the next releases we want to use more parts of the solarium API and also contribute to that API to share the improvements with other PHP projects.
+
 
 How to Get Involved
 ===================
@@ -355,7 +287,7 @@ There are many ways to get involved with Apache Solr for TYPO3:
 
 Support us in 2019 by becoming an EB partner:
 
-http://www.typo3-solr.com/en/contact/ 
+http://www.typo3-solr.com/en/contact/
 
 or call:
 

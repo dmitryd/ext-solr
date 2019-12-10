@@ -5,8 +5,11 @@
 
 .. include:: Includes.txt
 
-
 .. _start:
+
+================================
+Apache Solr for TYPO3 (EXT:solr)
+================================
 
 .. only:: html
 
@@ -14,7 +17,7 @@
 		solr
 
 	:Version:
-		9.0.0-dev
+		10.0.0-dev
 
 	:Language:
 		en
@@ -26,7 +29,8 @@
 		search, full text, index, solr, lucene, fast, query, results
 
 	:Copyright:
-		2009-2018
+		2009-2019
+		2009-2019
 
 	:Author:
 		Ingo Renner, Markus Friedrich, Rafael Kähm, Timo Hund

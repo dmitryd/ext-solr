@@ -5,14 +5,6 @@
 
 .. include:: ../Includes.txt
 
-.. raw:: latex
-
-    \newpage
-
-.. raw:: pdf
-
-   PageBreak
-
 .. _faq-index:
 
 FAQ - Frequently Asked Questions
@@ -277,7 +269,7 @@ This was tested with "Docker for Mac" (not Docker Toolbox). Before executing the
 ::
 
     # build the image
-    docker build -t typo3-solr -f Dockerfile .
+    docker build -t typo3-solr -f Docker/SolrServer/Dockerfile .
 
     # create volume directory locally
     mkdir -p ~/solrdata
@@ -286,7 +278,7 @@ This was tested with "Docker for Mac" (not Docker Toolbox). Before executing the
     sudo chown :8983 ~/solrdata
 
     # run docker container from image with volume
-    docker run -d -p 127.0.0.1:8282:8983 -v ~/solrdata:/opt/solr/server/solr/data typo3-solr
+    docker run -d -p 127.0.0.1:8282:8983 -v ~/solrdata:/var/solr/data/data typo3-solr
 
 
 **Can i index a https (SSL) site?**
@@ -585,9 +577,8 @@ You can set the credentials by the following configuration:
 	plugin.tx_solr.index.queue.pages.indexer.authorization.username = your_username
 	plugin.tx_solr.index.queue.pages.indexer.authorization.password = your_password
 
-::
 
-As credentials are stored as plain text, go for sure that your web server does not serve your TypoScript files publicly (protect the directory or by file endings).
+As credentials are stored as plain text, go for sure that your web server does not serve your TypoScript files publicly \(protect the directory or by file endings\).
 If you don't want to store plain text passwords, you can configure your web server to allow access from a specific domain (see below).
 
 If you have multiple domains to index, the webserver requires the credentials for each domain accessed by the solr indexer. The extension passes the credentials only once, so you will run into errors on a multi domain environment.
@@ -601,7 +592,5 @@ Solution: Instead of passing the credentials as shown above, configure your webs
 	        Require ip XXX.XX.XX.XX (the IP of the solr server)
 	        Require valid-user
 	</RequireAny>
-
-::
 
 Be aware, that this will allow all accesses by given IP.

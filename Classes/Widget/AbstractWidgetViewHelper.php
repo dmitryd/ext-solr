@@ -18,8 +18,8 @@ use ApacheSolrForTypo3\Solr\Mvc\Controller\SolrControllerContext;
 use ApacheSolrForTypo3\Solr\Widget\WidgetRequest as SolrFluidWidgetRequest;
 use TYPO3\CMS\Extbase\Mvc\Web\Response;
 use TYPO3\CMS\Extbase\Object\ObjectManagerInterface;
-use TYPO3\CMS\Fluid\Core\Parser\SyntaxTree\RootNode;
-use TYPO3\CMS\Fluid\Core\ViewHelper\Facets\ChildNodeAccessInterface;
+use TYPO3Fluid\Fluid\Core\Parser\SyntaxTree\RootNode;
+use TYPO3Fluid\Fluid\Core\ViewHelper\ViewHelperInterface;
 use TYPO3\CMS\Fluid\Core\Widget\AbstractWidgetViewHelper as AbstractCoreWidgetViewHelper;
 use TYPO3\CMS\Fluid\Core\Widget\AjaxWidgetContextHolder;
 use TYPO3\CMS\Fluid\Core\Widget\Exception\MissingControllerException;
@@ -39,12 +39,12 @@ use TYPO3\CMS\Extbase\Service\ExtensionService;
  * @author Timo Hund <timo.hund@dkd.de>
  * @package ApacheSolrForTypo3\Solr\Widget
  */
-abstract class AbstractWidgetViewHelper extends AbstractCoreWidgetViewHelper implements ChildNodeAccessInterface
+abstract class AbstractWidgetViewHelper extends AbstractCoreWidgetViewHelper implements ViewHelperInterface
 {
 
     /**
      * The Controller associated to this widget.
-     * This needs to be filled by the individual subclass by an @inject
+     * This needs to be filled by the individual subclass by di
      * annotation.
      *
      * @var AbstractWidgetController
@@ -121,16 +121,13 @@ abstract class AbstractWidgetViewHelper extends AbstractCoreWidgetViewHelper imp
     }
 
     /**
-     * @todo The fallback on $this->controllerContext is only needed for TYPO3 8 backwards compatibility and can be dropped when TYPO3 8 is not supported anymore
      * @return SolrControllerContext
      * @throws \InvalidArgumentException
      */
     protected function getControllerContext()
     {
         $controllerContext = null;
-        if (!is_null($this->controllerContext)) {
-            $controllerContext = $this->controllerContext;
-        } elseif (method_exists($this->renderingContext, 'getControllerContext')) {
+        if (method_exists($this->renderingContext, 'getControllerContext')) {
             $controllerContext = $this->renderingContext->getControllerContext();
         }
 

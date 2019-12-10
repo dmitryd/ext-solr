@@ -25,7 +25,7 @@ namespace ApacheSolrForTypo3\Solr\Task;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Logging\SolrLogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Scheduler\Task\AbstractTask;
@@ -94,8 +94,8 @@ abstract class AbstractSolrTask extends AbstractTask {
     public function __sleep()
     {
         $properties = get_object_vars($this);
-        // avoid serialization if the site object
-        unset($properties['site']);
+        // avoid serialization of the site and logger object
+        unset($properties['site'], $properties['logger']);
         return array_keys($properties);
     }
 }

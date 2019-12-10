@@ -111,10 +111,6 @@ class ConfigurationAwareRecordService
 
         $recordWhereClause = $solrConfiguration->getIndexQueueAdditionalWhereClauseByConfigurationName($indexingConfigurationName);
 
-        if ($recordTable === 'pages_language_overlay') {
-            return $this->getPageOverlayRecordIfParentIsAccessible($recordUid, $recordWhereClause);
-        }
-
         $row = $this->getRecordForIndexConfigurationIsValid($recordTable, $recordUid, $recordWhereClause);
 
         return $row;
@@ -160,10 +156,7 @@ class ConfigurationAwareRecordService
 
         $isMatchingTable = ($tableToIndex === $recordTable);
 
-        //@todo this case can be removed when TYPO3 8 compatibility is dropped
-        $isPagesPassedAndOverlayRequested = $tableToIndex === 'pages' && $recordTable === 'pages_language_overlay';
-
-        if ($isMatchingTable || $isPagesPassedAndOverlayRequested) {
+        if ($isMatchingTable) {
             return true;
         }
 
@@ -171,7 +164,7 @@ class ConfigurationAwareRecordService
     }
 
     /**
-     * This method retrieves the pages_language_overlay record when the parent record is accessible
+     * This method retrieves the parent pages record when the parent record is accessible
      * through the recordWhereClause
      *
      * @param int $recordUid
@@ -180,14 +173,8 @@ class ConfigurationAwareRecordService
      */
     protected function getPageOverlayRecordIfParentIsAccessible($recordUid, $parentWhereClause)
     {
-        //@todo getting parent id from pages_language_overlay can be dropped when compatibility for TYPO3 8 is dropped
-        if (Util::getIsTYPO3VersionBelow9()) {
-            $overlayRecord = (array)BackendUtility::getRecord('pages_language_overlay', $recordUid, '*');
-            $overlayParentId = $overlayRecord['pid'];
-        } else {
-            $overlayRecord = (array)BackendUtility::getRecord('pages', $recordUid, '*');
-            $overlayParentId = $overlayRecord['l10n_parent'];
-        }
+        $overlayRecord = (array)BackendUtility::getRecord('pages', $recordUid, '*');
+        $overlayParentId = $overlayRecord['l10n_parent'];
 
         $pageRecord = (array)BackendUtility::getRecord('pages', $overlayParentId, '*', $parentWhereClause);
 

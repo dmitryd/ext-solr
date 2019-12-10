@@ -48,7 +48,7 @@ class ExtensionConfiguration
     public function __construct($configurationToUse = [])
     {
         if (empty($configurationToUse)) {
-            $this->configuration = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['solr']);
+            $this->configuration = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Configuration\ExtensionConfiguration::class)->get('solr');
         } else {
             $this->configuration = $configurationToUse;
         }
@@ -99,6 +99,16 @@ class ExtensionConfiguration
         }
 
         return GeneralUtility::trimExplode(',', $monitorTablesList);
+    }
+
+    /**
+     * Get configuration for allowLegacySiteMode
+     *
+     * @return bool
+     */
+    public function getIsAllowLegacySiteModeEnabled(): bool
+    {
+        return (bool)$this->getConfigurationOrDefaultValue('allowLegacySiteMode', false);
     }
 
     /**

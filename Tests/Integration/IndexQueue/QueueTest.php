@@ -26,7 +26,7 @@ namespace ApacheSolrForTypo3\Solr\Tests\Integration\IndexQueue;
 
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
 use ApacheSolrForTypo3\Solr\IndexQueue\Queue;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -54,6 +54,7 @@ class QueueTest extends IntegrationTest
     public function setUp()
     {
         parent::setUp();
+        $this->writeDefaultSolrTestSiteConfiguration();
         $this->indexQueue = GeneralUtility::makeInstance(Queue::class);
         $this->siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
     }
@@ -250,13 +251,13 @@ class QueueTest extends IntegrationTest
 
 
         $firstRootPage = $this->indexQueue->getItems('pages',1);
-        $secondRootPage = $this->indexQueue->getItems('pages',2);
+        $secondRootPage = $this->indexQueue->getItems('pages',111);
 
         $this->assertCount(1, $firstRootPage);
         $this->assertCount(1, $secondRootPage);
 
         $firstSubPage = $this->indexQueue->getItems('pages',10);
-        $secondSubPage = $this->indexQueue->getItems('pages',20);
+        $secondSubPage = $this->indexQueue->getItems('pages',1111);
 
         $this->assertCount(1, $firstSubPage);
         $this->assertCount(1, $secondSubPage);
@@ -272,7 +273,7 @@ class QueueTest extends IntegrationTest
         $this->importDataSetFromFixture('can_get_statistics_by_site.xml');
         $this->assertItemsInQueue(4);
 
-        $site = $this->siteRepository->getSiteByPageId(2);
+        $site = $this->siteRepository->getSiteByPageId(111);
         $statistics = $this->indexQueue->getStatisticsBySite($site);
         $this->assertSame(1, $statistics->getSuccessCount(), 'Can not get successful processed items from queue');
         $this->assertSame(1, $statistics->getFailedCount(), 'Can not get failed processed items from queue');
@@ -287,7 +288,7 @@ class QueueTest extends IntegrationTest
         $this->importDataSetFromFixture('can_get_statistics_by_site_and_custom_indexing_configuration.xml');
         $this->assertItemsInQueue(4);
 
-        $site = $this->siteRepository->getSiteByPageId(2);
+        $site = $this->siteRepository->getSiteByPageId(111);
         $statistics = $this->indexQueue->getStatisticsBySite($site, 'customIndexingConfigurationName');
 
         $this->assertSame(1, $statistics->getSuccessCount(), 'Can not get successful processed custom items from queue');
@@ -464,7 +465,7 @@ class QueueTest extends IntegrationTest
         $errorsForFirstSite = $this->indexQueue->getErrorsBySite($firstSite);
         $this->assertSame(0, count($errorsForFirstSite), 'Unexpected amount of errors for the first site after reset');
 
-        $secondSite = $siteRepository->getSiteByPageId(2);
+        $secondSite = $siteRepository->getSiteByPageId(111);
         $errorsForSecondSite = $this->indexQueue->getErrorsBySite($secondSite);
         $this->assertSame(0, count($errorsForSecondSite), 'Unexpected amount of errors for the second site after reset');
     }
@@ -489,8 +490,29 @@ class QueueTest extends IntegrationTest
         $errorsForFirstSite = $this->indexQueue->getErrorsBySite($firstSite);
         $this->assertSame(0, count($errorsForFirstSite), 'Unexpected amount of errors for the first site after reset');
 
-        $secondSite = $siteRepository->getSiteByPageId(2);
+        $secondSite = $siteRepository->getSiteByPageId(111);
         $errorsForSecondSite = $this->indexQueue->getErrorsBySite($secondSite);
         $this->assertSame(1, count($errorsForSecondSite), 'Unexpected amount of errors for the second site after reset');
+    }
+
+    /**
+     * @test
+     */
+    public function canFlushErrorByItem() {
+        $this->importDataSetFromFixture('can_flush_error_by_item.xml');
+        $this->assertItemsInQueue(4);
+
+        /** @var $siteRepository SiteRepository */
+        $siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
+        $firstSite = $siteRepository->getFirstAvailableSite();
+
+        $errorsForFirstSite = $this->indexQueue->getErrorsBySite($firstSite);
+        $this->assertSame(2, count($errorsForFirstSite), 'Unexpected amount of errors for the first site');
+
+        $item = $this->indexQueue->getItem(4714);
+        $this->indexQueue->resetErrorByItem($item);
+
+        $errorsForFirstSite = $this->indexQueue->getErrorsBySite($firstSite);
+        $this->assertSame(1, count($errorsForFirstSite), 'Unexpected amount of errors for the first site after resetting one item');
     }
 }

@@ -29,12 +29,13 @@ namespace ApacheSolrForTypo3\Solr\Task;
 use ApacheSolrForTypo3\Solr\Backend\IndexingConfigurationSelectorField;
 use ApacheSolrForTypo3\Solr\Backend\SiteSelectorField;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Scheduler\AdditionalFieldProviderInterface;
 use TYPO3\CMS\Scheduler\Controller\SchedulerModuleController;
 use TYPO3\CMS\Scheduler\Task\AbstractTask;
+use TYPO3\CMS\Scheduler\Task\Enumeration\Action;
 
 /**
  * Adds an additional field to specify the Solr server to initialize the index queue for
@@ -106,7 +107,9 @@ class ReIndexTaskAdditionalFieldProvider implements AdditionalFieldProviderInter
         $this->task = $task;
         $this->schedulerModule = $schedulerModule;
 
-        if ($schedulerModule->CMD === 'edit') {
+        $currentAction = $schedulerModule->getCurrentAction();
+
+        if ($currentAction->equals(Action::EDIT)) {
             $this->site = $this->siteRepository->getSiteByRootPageId($task->getRootPageId());
         }
     }

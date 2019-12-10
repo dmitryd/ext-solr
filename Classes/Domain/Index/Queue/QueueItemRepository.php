@@ -25,10 +25,11 @@ namespace ApacheSolrForTypo3\Solr\Domain\Index\Queue;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\IndexQueue\Item;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Logging\SolrLogManager;
 use ApacheSolrForTypo3\Solr\System\Records\AbstractRepository;
 use Doctrine\DBAL\DBALException;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -116,7 +117,7 @@ class QueueItemRepository extends AbstractRepository
 
     /**
      * Flushes the errors for a single site.
-     *X
+     *
      * @param Site $site
      * @return int
      */
@@ -126,6 +127,23 @@ class QueueItemRepository extends AbstractRepository
         $affectedRows = $this->getPreparedFlushErrorQuery($queryBuilder)
             ->andWhere(
                 $queryBuilder->expr()->eq('root', (int)$site->getRootPageId())
+            )
+            ->execute();
+        return $affectedRows;
+    }
+
+    /**
+     * Flushes the error for a single item.
+     *
+     * @param Item $item
+     * @return int affected rows
+     */
+    public function flushErrorByItem(Item $item) : int
+    {
+        $queryBuilder = $this->getQueryBuilder();
+        $affectedRows = $this->getPreparedFlushErrorQuery($queryBuilder)
+            ->andWhere(
+                $queryBuilder->expr()->eq('uid', $item->getIndexQueueUid())
             )
             ->execute();
         return $affectedRows;
@@ -238,7 +256,7 @@ class QueueItemRepository extends AbstractRepository
      */
     public function getPageItemChangedTimeByPageUid(int $pageUid)
     {
-        $queryBuilder = $this->getQueryBuilder();
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('tt_content');
         $queryBuilder->getRestrictions()->removeAll();
         $pageContentLastChangedTime = $queryBuilder
             ->add('select', $queryBuilder->expr()->max('tstamp', 'changed_time'))
@@ -263,15 +281,11 @@ class QueueItemRepository extends AbstractRepository
     {
         $localizedChangedTime = 0;
 
-        if ($itemType === 'pages') {
-            $itemType = 'pages_language_overlay';
-        }
-
         if (isset($GLOBALS['TCA'][$itemType]['ctrl']['transOrigPointerField'])) {
             // table is localizable
             $translationOriginalPointerField = $GLOBALS['TCA'][$itemType]['ctrl']['transOrigPointerField'];
 
-            $queryBuilder = $this->getQueryBuilder();
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($itemType);
             $queryBuilder->getRestrictions()->removeAll();
             $localizedChangedTime = $queryBuilder
                 ->add('select', $queryBuilder->expr()->max('tstamp', 'changed_time'))
@@ -468,20 +482,33 @@ class QueueItemRepository extends AbstractRepository
      */
     private function buildQueryForPropertyDeletion(QueryBuilder $queryBuilderForDeletingItems, array $rootPageIds, string $indexQueueConfigurationList, string $itemTypeList, array $itemUids, array $uids): QueryBuilder
     {
-        $queryBuilderForDeletingProperties = $queryBuilderForDeletingItems->getConnection()->createQueryBuilder();
-        $queryBuilderForDeletingProperties->delete('tx_solr_indexqueue_indexing_property')->innerJoin(
+        $queryBuilderForSelectingProperties = $queryBuilderForDeletingItems->getConnection()->createQueryBuilder();
+        $queryBuilderForSelectingProperties->select('items.uid')->from('tx_solr_indexqueue_indexing_property', 'properties')->innerJoin(
             'properties',
             $this->table,
             'items',
-            (string)$queryBuilderForDeletingProperties->expr()->andX(
-                $queryBuilderForDeletingProperties->expr()->eq('items.uid', $queryBuilderForDeletingProperties->quoteIdentifier('properties.item_id')),
-                empty($rootPageIds) ? '' : $queryBuilderForDeletingProperties->expr()->in('items.root', $rootPageIds),
-                empty($indexQueueConfigurationList) ? '' : $queryBuilderForDeletingProperties->expr()->in('items.indexing_configuration', $queryBuilderForDeletingProperties->createNamedParameter($indexQueueConfigurationList)),
-                empty($itemTypeList) ? '' : $queryBuilderForDeletingProperties->expr()->in('items.item_type', $queryBuilderForDeletingProperties->createNamedParameter($itemTypeList)),
-                empty($itemUids) ? '' : $queryBuilderForDeletingProperties->expr()->in('items.item_uid', $itemUids),
-                empty($uids) ? '' : $queryBuilderForDeletingProperties->expr()->in('items.uid', $uids)
+            (string)$queryBuilderForSelectingProperties->expr()->andX(
+                $queryBuilderForSelectingProperties->expr()->eq('items.uid', $queryBuilderForSelectingProperties->quoteIdentifier('properties.item_id')),
+                empty($rootPageIds) ? '' : $queryBuilderForSelectingProperties->expr()->in('items.root', $rootPageIds),
+                empty($indexQueueConfigurationList) ? '' : $queryBuilderForSelectingProperties->expr()->in('items.indexing_configuration', $queryBuilderForSelectingProperties->createNamedParameter($indexQueueConfigurationList)),
+                empty($itemTypeList) ? '' : $queryBuilderForSelectingProperties->expr()->in('items.item_type', $queryBuilderForSelectingProperties->createNamedParameter($itemTypeList)),
+                empty($itemUids) ? '' : $queryBuilderForSelectingProperties->expr()->in('items.item_uid', $itemUids),
+                empty($uids) ? '' : $queryBuilderForSelectingProperties->expr()->in('items.uid', $uids)
             )
         );
+        $propertyEntriesToDelete = implode(',', array_column($queryBuilderForSelectingProperties->execute()->fetchAll(), 'uid'));
+
+        $queryBuilderForDeletingProperties = $queryBuilderForDeletingItems->getConnection()->createQueryBuilder();
+
+        // make sure executing the propety deletion query doesn't fail if there are no properties to delete
+        if (empty($propertyEntriesToDelete)) {
+            $propertyEntriesToDelete = '0';
+        }
+
+        $queryBuilderForDeletingProperties->delete('tx_solr_indexqueue_indexing_property')->where(
+            $queryBuilderForDeletingProperties->expr()->in('item_id', $propertyEntriesToDelete)
+        );
+
         return $queryBuilderForDeletingProperties;
     }
 
@@ -660,7 +687,7 @@ class QueueItemRepository extends AbstractRepository
         foreach ($tableUids as $table => $uids) {
             $uidList = implode(',', $uids);
 
-            $queryBuilderForRecordTable = $this->getQueryBuilder();
+            $queryBuilderForRecordTable = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($table);
             $queryBuilderForRecordTable->getRestrictions()->removeAll();
             $resultsFromRecordTable = $queryBuilderForRecordTable
                 ->select('*')

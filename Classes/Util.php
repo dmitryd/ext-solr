@@ -30,7 +30,10 @@ use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationManager;
 use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationPageResolver;
 use ApacheSolrForTypo3\Solr\System\Configuration\ExtensionConfiguration;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
-use ApacheSolrForTypo3\Solr\System\TCA\TCAService;
+use Symfony\Component\EventDispatcher\GenericEvent;
+use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Context\LanguageAspect;
+use TYPO3\CMS\Core\Utility\RootlineUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use ApacheSolrForTypo3\Solr\System\Mvc\Frontend\Controller\OverriddenTypoScriptFrontendController;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -140,6 +143,9 @@ class Util
         static $configurationObjectCache = [];
         $cacheId = md5($pageId . '|' . $path . '|' . $language . '|' . ($initializeTsfe ? '1' : '0'));
         if (isset($configurationObjectCache[$cacheId])) {
+            if ($initializeTsfe) {
+                self::initializeTsfe($pageId, $language);
+            }
             return $configurationObjectCache[$cacheId];
         }
 
@@ -158,6 +164,9 @@ class Util
 
         if (!empty($configurationArray)) {
             // we have a cache hit and can return it.
+            if ($initializeTsfe) {
+                self::initializeTsfe($pageId, $language);
+            }
             return $configurationObjectCache[$cacheId] = self::buildTypoScriptConfigurationFromArray($configurationArray, $pageId, $language, $path);
         }
 
@@ -258,7 +267,13 @@ class Util
 
             /** @var $pageSelect PageRepository */
         $pageSelect = GeneralUtility::makeInstance(PageRepository::class);
-        $rootLine = $pageSelect->getRootLine($pageId);
+
+        $rootlineUtility = GeneralUtility::makeInstance(RootlineUtility::class, $pageId);
+        try {
+            $rootLine = $rootlineUtility->get();
+        } catch (\RuntimeException $e) {
+            $rootLine = [];
+        }
 
         $initializedTsfe = false;
         $initializedPageSelect = false;
@@ -317,9 +332,16 @@ class Util
             $GLOBALS['TT'] = GeneralUtility::makeInstance(TimeTracker::class, false);
         }
 
-        if (!isset($tsfeCache[$cacheId]) || !$useCache) {
-            GeneralUtility::_GETset($language, 'L');
 
+        /** @var Context $context */
+        $context = GeneralUtility::makeInstance(Context::class);
+        $context->setAspect('language', GeneralUtility::makeInstance(LanguageAspect::class, $language));
+
+        // needs to be set regardless if $GLOBALS['TSFE'] is loaded from cache
+        // otherwise it is not guaranteed that the correct language id is used everywhere for this index cycle (e.g. Typo3QuerySettings)
+        GeneralUtility::_GETset($language, 'L');
+
+        if (!isset($tsfeCache[$cacheId]) || !$useCache) {
 
             $GLOBALS['TSFE'] = GeneralUtility::makeInstance(OverriddenTypoScriptFrontendController::class, $GLOBALS['TYPO3_CONF_VARS'], $pageId, 0);
 
@@ -355,6 +377,10 @@ class Util
             $GLOBALS['TSFE']->absRefPrefix = self::getAbsRefPrefixFromTSFE($GLOBALS['TSFE']);
             $GLOBALS['TSFE']->calculateLinkVars();
 
+            // fixes wrong language uid in global context when tsfe is taken from cache
+            $GLOBALS['TSFE']->__set('sys_language_uid', $language);
+
+
             if ($useCache) {
                 $tsfeCache[$cacheId] = $GLOBALS['TSFE'];
             }
@@ -373,14 +399,11 @@ class Util
      */
     private static function getPageAndRootlineOfTSFE($pageId)
     {
-        //@todo This can be dropped when TYPO3 8 compatibility is dropped
-        if (Util::getIsTYPO3VersionBelow9()) {
-            $GLOBALS['TSFE']->getPageAndRootline();
-        } else {
-            //@todo When we drop the support of TYPO3 8 we should use the frontend middleware stack instead of initializing this on our own
-            /** @var $siteRepository SiteRepository */
-            $siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
-            $site = $siteRepository->getSiteByPageId($pageId);
+        //@todo When we drop the support of TYPO3 8 we should use the frontend middleware stack instead of initializing this on our own
+        /** @var $siteRepository SiteRepository */
+        $siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
+        $site = $siteRepository->getSiteByPageId($pageId);
+        if (!is_null($site)) {
             $GLOBALS['TSFE']->getPageAndRootlineWithDomain($site->getRootPageId());
         }
     }
@@ -465,23 +488,6 @@ class Util
         return $absRefPrefix;
     }
 
-    /**
-     * @todo This method is just added for pages_language_overlay compatibility checks and will be removed when TYPO8 support is dropped
-     * @return boolean
-     */
-    public static function getIsTYPO3VersionBelow9()
-    {
-        return (bool)version_compare(TYPO3_branch, '9.0', '<');
-    }
-
-    /**
-     * @todo This method is just added for pages_language_overlay compatibility checks and will be removed when TYPO8 support is dropped
-     * @return string
-     */
-    public static function getPageOverlayTableName()
-    {
-        return self::getIsTYPO3VersionBelow9() ? 'pages_language_overlay' : 'pages';
-    }
 
     /**
      * This function can be used to check if one of the strings in needles is
@@ -512,5 +518,32 @@ class Util
         }
 
         return false;
+    }
+
+    /**
+     * Returns the current language ID from the active context.
+     * @return int
+     */
+    public static function getLanguageUid(): int
+    {
+        $context = GeneralUtility::makeInstance(Context::class);
+        return (int)$context->getPropertyFromAspect('language', 'id');
+    }
+
+    /**
+     * @return string
+     */
+    public static function getFrontendUserGroupsList(): string
+    {
+        return implode(',', self::getFrontendUserGroups());
+    }
+
+    /**
+     * @return array
+     */
+    public static function getFrontendUserGroups(): array
+    {
+        $context = GeneralUtility::makeInstance(Context::class);
+        return $context->getPropertyFromAspect('frontend.user', 'groupIds');
     }
 }

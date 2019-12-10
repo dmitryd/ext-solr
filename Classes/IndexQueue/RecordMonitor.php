@@ -184,9 +184,14 @@ class RecordMonitor extends AbstractDataHandlerListener
             $this->applyVersionSwap($table, $uid, $tceMain);
         }
 
-        if ($command === 'move' && $table === 'pages' && $GLOBALS['BE_USER']->workspace == 0) {
-            // moving pages in LIVE workspace
-            $this->applyPageChangesToQueue($uid);
+        // moving pages/records in LIVE workspace
+        if ($command === 'move' && $GLOBALS['BE_USER']->workspace == 0) {
+            if ($table === 'pages') {
+                $this->applyPageChangesToQueue($uid);
+            } else {
+                $this->applyRecordChangesToQueue($table, $uid, $value);
+            }
+
         }
     }
 
@@ -367,11 +372,6 @@ class RecordMonitor extends AbstractDataHandlerListener
         $isLocalizedRecord = $this->tcaService->isLocalizedRecord($recordTable, $record);
         $recordUid = $this->tcaService->getTranslationOriginalUidIfTranslated($recordTable, $record, $recordUid);
 
-        //@todo This can be dropped when TYPO3 8 compatibility is dropped
-        if ($isLocalizedRecord && $recordTable === 'pages_language_overlay') {
-            $recordTable = 'pages';
-        }
-
         if ($isLocalizedRecord && !$this->getIsTranslationParentRecordEnabled($recordTable, $recordUid)) {
             // we have a localized record without a visible parent record. Nothing to do.
             return;
@@ -451,7 +451,7 @@ class RecordMonitor extends AbstractDataHandlerListener
      */
     protected function getRecordPageId($status, $recordTable, $recordUid, $originalUid, array $fields, DataHandler $tceMain)
     {
-        if ($recordTable === 'pages' && isset($fields['l10n_parent'])) {
+        if ($recordTable === 'pages' && isset($fields['l10n_parent']) && intval($fields['l10n_parent']) > 0) {
             return $fields['l10n_parent'];
         }
 

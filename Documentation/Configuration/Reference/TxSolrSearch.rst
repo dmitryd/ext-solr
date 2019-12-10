@@ -6,16 +6,6 @@
 .. include:: ../../Includes.txt
 
 
-.. raw:: latex
-
-    \newpage
-
-.. raw:: pdf
-
-   PageBreak
-
-.. _conf-tx-solr-search:
-
 tx_solr.search
 ===============
 
@@ -369,7 +359,7 @@ This parameter defines the "phrase slop" value, which represents the number of p
 Note: The value of this setting has NO influence on explicit phrase search.
 
 query.phrase.querySlop
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 :Type: Integer
 :TS Path: plugin.tx_solr.search.query.phrase.querySlop
@@ -423,7 +413,7 @@ This parameter defines the "bigram phrase slop" value, which represents the numb
 Note: The value of this setting has NO influence on explicit phrase search.
 
 query.trigramPhrase
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 :Type: Boolean
 :TS Path: plugin.tx_solr.search.query.trigramPhrase
@@ -435,7 +425,7 @@ This parameter enables the phrase search feature from Apache Solr. Setting is to
 Enabling phrase search feature influences the scores of documents with phrase occurrences.
 
 query.trigramPhrase.fields
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :Type: String
 :TS Path: plugin.tx_solr.search.query.trigramPhrase.fields
@@ -449,7 +439,7 @@ Fields are defined as a comma separated list and same way as queryFields.
 Note: The value of this setting has NO influence on explicit phrase search.
 
 query.trigramPhrase.slop
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 :Type: Integer
 :TS Path: plugin.tx_solr.search.query.trigramPhrase.slop
@@ -550,25 +540,6 @@ results.resultsPerPageSwitchOptions
 :Default: 10, 25, 50
 
 Defines the shown options of possible results per page.
-
-results.pagebrowser
-~~~~~~~~~~~~~~~~~~~
-
-:Since: 2.0
-:TS Path: plugin.tx_solr.search.results.pagebrowser
-
-Allows to set configuration options for the pagebrowser provided by EXT:pagebrowse.
-
-results.ignorePageBrowser
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:Type: Boolean
-:TS Path: plugin.tx_solr.search.results.ignorePageBrowser
-:Since: 1.0
-:Default: 0
-:Options: 0, 1
-
-If enabled, the selected page will be ignored. Useful if you place two search plugins on a page but want one of the to always show the first results only.
 
 results.showDocumentScoreAnalysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -842,19 +813,6 @@ faceting.facetLimit
 Number of options of a facet returned from solr.
 
 
-faceting.singleFacetMode
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-:Type: Boolean
-:TS Path: plugin.tx_solr.search.faceting.singleFacetMode
-:Since: 1.2, 2.0
-:Default: 0
-:Options: 0, 1
-
-If enabled, the user can only select an option from one facet at a time.
-
-Lets say you have two facets configured, type and author. If the user selects a facet option from type its filter is added to the query. Normally when selecting another option from the other facet - the author facet - this would lead to having two facet filters applied to the query. When this option is activated the option from the author facet will simply replace the first option from the type facet.
-
 faceting.keepAllFacetsOnSelection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -865,6 +823,25 @@ faceting.keepAllFacetsOnSelection
 :Options: 0, 1
 
 When enabled selecting an option from a facet will not reduce the number of options available in other facets.
+
+faceting.countAllFacetsForSelection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:Type: Boolean
+:TS Path: plugin.tx_solr.search.faceting.countAllFacetsForSelection
+:Since: 8.0
+:Default: 0
+:Options: 0, 1
+
+When ```keepAllFacetsOnSelection``` is active the count of a facet do not get reduced. You can use ```countAllFacetsForSelection``` to achieve that.
+
+The following example shows how to keep all options of all facets by keeping the real document count, even when it has zero options:
+
+```
+plugin.tx_solr.search.faceting.keepAllFacetsOnSelection = 1
+plugin.tx_solr.search.faceting.countAllFacetsForSelection = 1
+plugin.tx_solr.search.faceting.minimumCount = 0
+```
 
 faceting.showAllLink.wrap
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -940,6 +917,33 @@ A facet will use the values of a configured index field to offer these values as
 
 To configure a facet you only need to provide the label and field configuration options, all other configuration options are optional.
 
+
+faceting.facets.[facetName].additionalExcludeTags
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:Type: String
+:TS Path: plugin.tx_solr.search.faceting.facets.[facetName].additionalExcludeTags
+:Since: 9.0
+:Required: no
+
+The settings ``keepAllOptionsOnSelection``` and ``keepAllFacetsOnSelection``` are used internally to build exclude tags for facets in order to exclude the filters from the facet counts.
+This helps to keep the counts of a facet as expected by the user, in some usecases (Read also: http://yonik.com/multi-select-faceting/).
+
+With the setting ``additionalExcludeTags``` you can add tags of factes that should be excluded from the counts as well.
+
+**Note:** This setting is only available for option facets by now.
+
+faceting.facets.[facetName].addFieldAsTag
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:Type: Boolean
+:TS Path: plugin.tx_solr.search.faceting.facets.[facetName].addFieldAsTag
+:Since: 9.0
+:Required: no
+:Default: false
+
+When you want to add fields as ```additionalExcludeTags``` for a facet a tag for this facet needs to exist. You can use this setting to force the creation of a tag for this facet in the solr query.
+
 faceting.facets.[facetName].field
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -994,7 +998,7 @@ faceting.facets.[facetName].metrics
 :Since: 8.0
 :Default: empty
 
-Metrics can be use to collect and enhance facet options with statistical data of the facetted documents. They can
+Metrics can be use to collect and enhance facet options with statistical data of the faceted documents. They can
 be used to render useful information in the context of an facet option.
 
 Example:

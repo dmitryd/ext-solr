@@ -53,6 +53,14 @@ class IndexAdministrationModuleController extends AbstractModuleController
     protected $solrConnectionManager = null;
 
     /**
+     * @param ConnectionManager $solrConnectionManager
+     */
+    public function setSolrConnectionManager(ConnectionManager $solrConnectionManager)
+    {
+        $this->solrConnectionManager = $solrConnectionManager;
+    }
+
+    /**
      * Initializes the controller before invoking an action method.
      */
     protected function initializeAction()
@@ -91,9 +99,10 @@ class IndexAdministrationModuleController extends AbstractModuleController
                 /* @var $solrServer SolrConnection */
                 $writeService->deleteByQuery('siteHash:' . $siteHash);
                 $writeService->commit(false, false, false);
-                $affectedCores[] = $writeService->getCoreName();
+                $affectedCores[] = $writeService->getPrimaryEndpoint()->getCore();
             }
-            $this->addFlashMessage(LocalizationUtility::translate('solr.backend.index_administration.index_emptied_all', 'Solr', [$this->selectedSite->getLabel(), implode(', ', $affectedCores)]));
+            $message = LocalizationUtility::translate('solr.backend.index_administration.index_emptied_all', 'Solr', [$this->selectedSite->getLabel(), implode(', ', $affectedCores)]);
+            $this->addFlashMessage($message);
         } catch (\Exception $e) {
             $this->addFlashMessage(LocalizationUtility::translate('solr.backend.index_administration.error.on_empty_index', 'Solr', [$e->__toString()]), '', FlashMessage::ERROR);
         }
@@ -131,8 +140,8 @@ class IndexAdministrationModuleController extends AbstractModuleController
             /* @var $solrServer SolrConnection */
             $coreAdmin = $solrServer->getAdminService();
             $coreReloaded = $coreAdmin->reloadCore()->getHttpStatus() === 200;
-            $coreName = $coreAdmin->getCoreName();
 
+            $coreName = $coreAdmin->getPrimaryEndpoint()->getCore();
             if (!$coreReloaded) {
                 $coresReloaded = false;
 
@@ -179,12 +188,7 @@ class IndexAdministrationModuleController extends AbstractModuleController
         $backendUriBuilder = GeneralUtility::makeInstance(BackendUriBuilder::class);
 
         $parameters =  ['id' => $this->selectedPageUID];
-        if (Util::getIsTYPO3VersionBelow9()) {
-            /** @var  @todo This can be dropped when the support for TYPO3 8 ist dropped */
-            $referringUri = $backendUriBuilder->buildUriFromModule('searchbackend_SolrIndexqueue', $parameters);
-        } else {
-            $referringUri = $backendUriBuilder->buildUriFromRoute('searchbackend_SolrIndexqueue', $parameters);
-        }
+        $referringUri = $backendUriBuilder->buildUriFromRoute('searchbackend_SolrIndexqueue', $parameters);
 
         $this->redirectToUri($referringUri);
     }

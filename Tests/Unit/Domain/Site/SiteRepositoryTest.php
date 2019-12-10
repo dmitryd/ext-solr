@@ -26,10 +26,12 @@ namespace ApacheSolrForTypo3\Solr\Tests\Unit\Domain\Site;
 
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper\RootPageResolver;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Cache\TwoLevelCache;
 use ApacheSolrForTypo3\Solr\Tests\Unit\UnitTest;
 use TYPO3\CMS\Core\Registry;
+use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
+use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
  * Testcase to check if the SiteRepository class works as expected.
@@ -61,16 +63,23 @@ class SiteRepositoryTest extends UnitTest
      */
     protected $siteRepository;
 
+    /**
+     * @var SiteFinder
+     */
+    protected $siteFinderMock;
+
     public function setUp()
     {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['solr'] = [];
         $this->cacheMock = $this->getDumbMock(TwoLevelCache::class);
         $this->rootPageResolverMock = $this->getDumbMock(RootPageResolver::class);
         $this->registryMock = $this->getDumbMock(Registry::class);
+        $this->siteFinderMock = $this->getDumbMock(SiteFinder::class);
 
         // we mock buildSite to avoid the creation of real Site objects and pass all dependencies as mock
         $this->siteRepository = $this->getMockBuilder(SiteRepository::class)
-            ->setConstructorArgs([$this->rootPageResolverMock, $this->cacheMock, $this->registryMock])
-            ->setMethods(['buildSite'])
+            ->setConstructorArgs([$this->rootPageResolverMock, $this->cacheMock, $this->registryMock, $this->siteFinderMock])
+            ->setMethods(['buildSite','getSolrServersFromRegistry'])
             ->getMock();
     }
 
@@ -109,11 +118,9 @@ class SiteRepositoryTest extends UnitTest
     public function canGetFirstAvailableSite()
     {
         $this->fakeEmptyCache();
-        $this->fakeSitesInRegistry([
-            '333|0' => ['rootPageUid' => 333],
-            '333|1' => ['rootPageUid' => 333],
-            '333|2' => ['rootPageUid' => 333]
-        ]);
+
+        $siteMock = $this->getSiteMock(333, [0,1,2]);
+        $this->fakeSitesInTYPO3Systems([$siteMock]);
 
         $this->assertThatSitesAreCreatedWithPageIds([333]);
         $this->assertCacheIsWritten();
@@ -128,12 +135,9 @@ class SiteRepositoryTest extends UnitTest
     public function canGetAvailableSites()
     {
         $this->fakeEmptyCache();
-        $this->fakeSitesInRegistry([
-            '123|0' => ['rootPageUid' => 123],
-            '123|1' => ['rootPageUid' => 123],
-            '234|0' => ['rootPageUid' => 234],
-            '234|2' => ['rootPageUid' => 234],
-        ]);
+        $siteMockA = $this->getSiteMock(123, [0,1]);
+        $siteMockB = $this->getSiteMock(234, [0,2]);
+        $this->fakeSitesInTYPO3Systems([$siteMockA, $siteMockB]);
 
         $this->assertThatSitesAreCreatedWithPageIds([123,234]);
         $this->assertCacheIsWritten();
@@ -148,17 +152,22 @@ class SiteRepositoryTest extends UnitTest
     public function canGetAllLanguages()
     {
         $this->fakeEmptyCache();
-        $this->fakeSitesInRegistry([
-            '123|0' => ['rootPageUid' => 123],
-            '123|1' => ['rootPageUid' => 123],
-            '123|2' => ['rootPageUid' => 123],
-            '234|0' => ['rootPageUid' => 234]
-        ]);
-        $this->assertThatSitesAreCreatedWithPageIds([123,234]);
+        $siteMockA = $this->getSiteMock(123, [0,2,5]);
+        $siteMockB = $this->getSiteMock(234, [0]);
+        $this->fakeSitesInTYPO3Systems([$siteMockA, $siteMockB]);
+
+        $this->assertThatSitesAreCreatedWithPageIds(
+            [123,234],
+            [
+                0 => ['language' => 0],
+                2 => ['language' => 2],
+                5 => ['language' => 5],
+            ]
+        );
 
         $siteOne = $this->siteRepository->getFirstAvailableSite();
-        $languages = $this->siteRepository->getAllLanguages($siteOne);
-        $this->assertEquals([0,1,2], $languages, 'Could not get languages for site');
+        $connections =$siteOne->getAllSolrConnectionConfigurations();
+        $this->assertEquals([0,2,5], array_keys($connections), 'Could not get languages for site');
     }
 
     /**
@@ -179,16 +188,21 @@ class SiteRepositoryTest extends UnitTest
 
     /**
      * @param array $pageIds
+     * @param array $fakedConnectionConfiguration
      */
-    protected function assertThatSitesAreCreatedWithPageIds(array $pageIds)
+    protected function assertThatSitesAreCreatedWithPageIds(array $pageIds, array $fakedConnectionConfiguration = [])
     {
         $this->siteRepository->expects($this->any())->method('buildSite')->will(
-            $this->returnCallback(function($idToUse) use ($pageIds) {
+            $this->returnCallback(function($idToUse) use ($pageIds, $fakedConnectionConfiguration) {
                 if(in_array($idToUse, $pageIds)) {
                     $site = $this->getDumbMock(Site::class);
                     $site->expects($this->any())->method('getRootPageId')->will(
                         $this->returnValue($idToUse)
                     );
+
+                    $site->expects($this->any())
+                        ->method('getAllSolrConnectionConfigurations')
+                        ->willReturn($fakedConnectionConfiguration);
                     return $site;
                 }
             })
@@ -205,12 +219,47 @@ class SiteRepositoryTest extends UnitTest
     }
 
     /**
+     * @param int $rootPageUid
+     * @return \TYPO3\CMS\Core\Site\Entity\Site
+     */
+    protected function getSiteMock(int $rootPageUid, array $languageUids)
+    {
+            /** @var \TYPO3\CMS\Core\Site\Entity\Site $siteMock */
+        $siteMock = $this->getDumbMock( \TYPO3\CMS\Core\Site\Entity\Site::class);
+        $siteMock->expects($this->any())->method('getRootPageId')->willReturn($rootPageUid);
+
+        $languageMocks = [];
+        $defaultLanguage = null;
+
+        foreach($languageUids as $languageUid) {
+            $languageMock = $this->getDumbMock(SiteLanguage::class);
+            $languageMock->expects($this->any())->method('getLanguageId')->willReturn($languageUid);
+            $languageMocks[] = $languageMock;
+        }
+
+        $siteMock->expects($this->any())->method('getAllLanguages')->willReturn($languageMocks);
+        $siteMock->expects($this->any())->method('getDefaultLanguage')->willReturn(reset($languageMocks));
+
+        return $siteMock;
+    }
+
+    /**
      * @param array $sitesInRegistry
      */
     protected function fakeSitesInRegistry(array $sitesInRegistry)
     {
-        $this->registryMock->expects($this->any())->method('get')->will(
+        $this->siteRepository->expects($this->any())->method('getSolrServersFromRegistry')->will(
             $this->returnValue($sitesInRegistry)
+        );
+    }
+
+    /**
+     * @param array $sitesInTYPO3
+     */
+    protected function fakeSitesInTYPO3Systems(array $sitesInTYPO3)
+    {
+        $this->siteFinderMock->expects($this->any())->method('getAllSites')->will(
+            $this->returnValue($sitesInTYPO3)
         );
     }
  }

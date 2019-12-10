@@ -25,7 +25,7 @@ namespace ApacheSolrForTypo3\Solr\Tests\Unit\Domain\Site;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteHashService;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\Tests\Unit\UnitTest;
 
 /**
@@ -45,7 +45,9 @@ class SiteHashServiceTest extends UnitTest
         return [
             'siteHashDisabled' => ['*', '*'],
             'allSitesInSystem' => ['__all', 'solrtesta.local,solrtestb.local'],
-            'currentSiteOnly' => ['__current_site', 'solrtesta.local']
+            'currentSiteOnly' => ['__current_site', 'solrtesta.local'],
+            'emptyIsFallingBackToCurrentSiteOnly' => ['', 'solrtesta.local'],
+            'nullIsFallingBackToCurrentSiteOnly' => [null, 'solrtesta.local']
         ];
     }
 

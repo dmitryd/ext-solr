@@ -30,7 +30,7 @@ use ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper\Configuratio
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper\RootPageResolver;
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\Statistic\QueueStatistic;
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\Statistic\QueueStatisticsRepository;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Cache\TwoLevelCache;
 use ApacheSolrForTypo3\Solr\System\Logging\SolrLogManager;
 use ApacheSolrForTypo3\Solr\Util;
@@ -262,6 +262,17 @@ class Queue
     public function resetErrorsBySite(Site $site)
     {
         return $this->queueItemRepository->flushErrorsBySite($site);
+    }
+
+    /**
+     * Resets the error in the index queue for a specific item
+     *
+     * @param Item $item
+     * @return mixed
+     */
+    public function resetErrorByItem(Item $item)
+    {
+        return $this->queueItemRepository->flushErrorByItem($item);
     }
 
     /**

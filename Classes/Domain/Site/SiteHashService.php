@@ -25,7 +25,6 @@ namespace ApacheSolrForTypo3\Solr\Domain\Site;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-use ApacheSolrForTypo3\Solr\Site;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -57,6 +56,8 @@ class SiteHashService
         } elseif ($allowedSitesConfiguration === '*') {
             return '*';
         } else {
+            // we thread empty allowed site configurations as __solr_current_site since this is the default behaviour
+            $allowedSitesConfiguration = empty($allowedSitesConfiguration) ? '__solr_current_site' : $allowedSitesConfiguration;
             return $this->getDomainByPageIdAndReplaceMarkers($pageId, $allowedSitesConfiguration);
         }
     }
@@ -121,7 +122,7 @@ class SiteHashService
 
     /**
      * @param $pageId
-     * @return Site
+     * @return SiteInterface
      */
     protected function getSiteByPageId($pageId)
     {

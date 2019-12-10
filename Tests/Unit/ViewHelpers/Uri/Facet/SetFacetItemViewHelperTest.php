@@ -27,7 +27,7 @@ namespace ApacheSolrForTypo3\Solr\Test\ViewHelpers\Uri\Facet;
 
 use ApacheSolrForTypo3\Solr\Domain\Search\Uri\SearchUriBuilder;
 use ApacheSolrForTypo3\Solr\ViewHelpers\Uri\Facet\SetFacetItemViewHelper;
-use TYPO3\CMS\Fluid\Core\Rendering\RenderingContextInterface;
+use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
 
 /**
@@ -52,6 +52,7 @@ class SetFacetItemViewHelperTest extends AbstractFacetItemViewHelperTest
             // we expected that the getSetFacetValueUri will be called on the searchUriBuilder in the end.
         $searchUriBuilderMock->expects($this->once())->method('getSetFacetValueUri')->with($facet->getResultSet()->getUsedSearchRequest(), 'Color', 'red');
         $viewHelper->injectSearchUriBuilder($searchUriBuilderMock);
+        // @extensionScannerIgnoreLine
         $viewHelper->setArguments(['facet' => $facet, 'facetItem' => $facet->getOptions()->getByPosition(0)]);
         $viewHelper->render();
     }

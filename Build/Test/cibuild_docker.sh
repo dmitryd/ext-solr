@@ -18,7 +18,7 @@ assertCoreIsAvailable ()
 }
 
 echo "Building docker image"
-docker build -t solrci -f Dockerfile .
+docker build -t solrci -f Docker/SolrServer/Dockerfile .
 
 echo "Creating testvolume"
 mkdir -p ~/solrcivolume
@@ -30,7 +30,7 @@ echo "Changing group of volume to solr user"
 sudo chown :8983 ~/solrcivolume
 
 echo "Starting container"
-docker run -d -p 127.0.0.1:8998:8983 -v ~/solrcivolume:/opt/solr/server/solr/data solrci
+docker run -d -p 127.0.0.1:8998:8983 -v ~/solrcivolume:/var/solr/data/data solrci
 
 echo "Waiting for container to boot"
 while true; do

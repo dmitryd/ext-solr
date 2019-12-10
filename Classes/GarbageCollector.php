@@ -268,7 +268,7 @@ class GarbageCollector extends AbstractDataHandlerListener implements SingletonI
     /**
      * Checks if the related index queue item is indexed.
      *
-     * * For tt_content and pages_language_overlay the page from the pid is checked
+     * * For tt_content the page from the pid is checked
      * * For all other records the table it's self is checked
      *
      * @param string $table The table name.
@@ -277,8 +277,7 @@ class GarbageCollector extends AbstractDataHandlerListener implements SingletonI
      */
     protected function isRelatedQueueRecordMarkedAsIndexed($table, $record)
     {
-        //@todo check for pages_language_overlay can be dropped when TYPO3 8 compatibility is dropped.
-        if ($table === 'tt_content' || $table === 'pages_language_overlay') {
+        if ($table === 'tt_content') {
             $table = 'pages';
             $uid = $record['pid'];
         } else {

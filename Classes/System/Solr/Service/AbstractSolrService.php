@@ -70,45 +70,6 @@ abstract class AbstractSolrService {
     }
 
     /**
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getPrimaryEndpoint()->getScheme() now.
-     * @return string
-     */
-    public function getScheme()
-    {
-        $endpoint = $this->getPrimaryEndpoint();
-        return is_null($endpoint) ? '' : $endpoint->getScheme();
-    }
-
-    /**
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getPrimaryEndpoint()->getHost() now.
-     * @return string
-     */
-    public function getHost()
-    {
-        $endpoint = $this->getPrimaryEndpoint();
-        return is_null($endpoint) ? '' : $endpoint->getHost();
-    }
-
-    /**
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getPrimaryEndpoint()->getPort() now.
-     * @return string
-     */
-    public function getPort()
-    {
-        $endpoint = $this->getPrimaryEndpoint();
-        return is_null($endpoint) ? '' : $endpoint->getPort();
-    }
-
-    /**
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getCorePath() now
-     * @return string
-     */
-    public function getPath()
-    {
-        return $this->getCorePath();
-    }
-
-    /**
      * Returns the path to the core solr path + core path.
      *
      * @return string
@@ -117,30 +78,6 @@ abstract class AbstractSolrService {
     {
         $endpoint = $this->getPrimaryEndpoint();
         return is_null($endpoint) ? '' : $endpoint->getPath() .'/'. $endpoint->getCore();
-    }
-
-    /**
-     * Returns the core name from the configured path without the core name.
-     *
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getPrimaryEndpoint()->getPath() now.
-     * @return string
-     */
-    public function getCoreBasePath()
-    {
-        $endpoint = $this->getPrimaryEndpoint();
-        return is_null($endpoint) ? '' : $endpoint->getPath();
-    }
-
-    /**
-     * Returns the core name from the configured path.
-     *
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getPrimaryEndpoint()->getCore() now.
-     * @return string
-     */
-    public function getCoreName()
-    {
-        $endpoint = $this->getPrimaryEndpoint();
-        return is_null($endpoint) ? '' : $endpoint->getCore();
     }
 
     /**
@@ -294,6 +231,7 @@ abstract class AbstractSolrService {
             return $logData;
         } else {
             // trigger data parsing
+            // @extensionScannerIgnoreLine
             $solrResponse->response;
             $logData['response data'] = print_r($solrResponse, true);
             return $logData;
@@ -314,7 +252,12 @@ abstract class AbstractSolrService {
      */
     public function ping($useCache = true)
     {
-        $httpResponse = $this->performPingRequest($useCache);
+        try {
+            $httpResponse = $this->performPingRequest($useCache);
+        } catch (HttpException $exception) {
+            return false;
+        }
+
         return ($httpResponse->getHttpStatus() === 200);
     }
 
@@ -347,41 +290,6 @@ abstract class AbstractSolrService {
 
         return $end - $start;
     }
-
-    /**
-     * Make a request to a servlet (a path) that's not a standard path.
-     *
-     * @deprecated Since 9.0.0 will be removed in 10.0.0 please use getClient()->executeRequest() now
-     * @param string $servlet Path to be added to the base Solr path.
-     * @param array $parameters Optional, additional request parameters when constructing the URL.
-     * @param string $method HTTP method to use, defaults to GET.
-     * @param array $requestHeaders Key value pairs of header names and values. Should include 'Content-Type' for POST and PUT.
-     * @param string $rawPost Must be an empty string unless method is POST or PUT.
-     * @return ResponseAdapter Response object
-     * @throws HttpException if returned HTTP status is other than 200
-     */
-    public function requestServlet($servlet, $parameters = [], $method = 'GET', $requestHeaders = [], $rawPost = '')
-    {
-        // Add default parameters
-        $parameters['wt'] = 'json';
-        $url = $this->_constructUrl($servlet, $parameters);
-
-        $setHeader = function(Request $request) use ($requestHeaders) {
-            $request->addHeaders($requestHeaders);
-            return $request;
-        };
-
-        if($method == Request::METHOD_GET) {
-            $solrResponse = $this->_sendRawRequest($url, Request::METHOD_GET, '', $setHeader);
-        } elseif ($method == Request::METHOD_POST) {
-            $solrResponse = $this->_sendRawRequest($url, Request::METHOD_POST, $rawPost, $setHeader);
-        } else {
-            throw new \InvalidArgumentException("Invalid http method passed");
-        }
-
-        return $solrResponse;
-    }
-
 
     /**
      * Performs a ping request and returns the result.

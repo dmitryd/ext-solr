@@ -10,35 +10,10 @@ After :ref:`started-install-extension` you need to configure the extension. Only
 Static TypoScript
 -----------------
 
-The extension already comes with basic configuration that will work for small pages out of the box. For now create, or
-edit an existing, TypoScript Template record in your page tree and add the provided static TypoScript:
+The extension already comes with basic configuration that will work for small pages out of the box. For now create or
+edit an existing TypoScript Template record in your page tree and add the provided static TypoScript:
 
 .. image:: ../Images/GettingStarted/typo3-include-static-typoscript.png
-
-Update the constants to match the current setup:
-
-.. code-block:: typoscript
-
-    plugin {
-        tx_solr {
-            solr {
-                read {
-                    host = 192.168.99.100
-                    port = 8983
-                }
-                write < .read
-            }
-        }
-    }
-
-Adjust the host according to where your Solr is reachable, see :ref:`started-solr`.
-
-**Note:**
-
-The static template configures what you need to query the solr server and do the indexing.
-In most projects you want to add facets or custom styles. If you want to use the default style you need to add
-the template "Search - Default Stylesheets". Beside that EXT:solr provides a few example typoscript templates that should
-help you to build your own configuration.
 
 .. _started-search-markers:
 
@@ -48,6 +23,7 @@ Search Markers
 EXT:solr is indexing everything on a page between `<!-- TYPO3SEARCH_begin -->` and `<!-- TYPO3SEARCH_end -->` to ensure this is the case, check the output of you website and add the markers to your template.
 
 If the markers are missing, you should add them to your template. To increase the quality of the search results the markes should only wrap the relevant content of a page and exclude e.g. menus, because they are same on each page.
+The markers can be used multiple times, but make sure each "TYPO3SEARCH_begin" is properly closed with "TYPO3SEARCH_end".
 
 The most simple configuration for my page was:
 
@@ -58,39 +34,58 @@ The most simple configuration for my page was:
         stdWrap.dataWrap = <!--TYPO3SEARCH_begin-->|<!--TYPO3SEARCH_end-->
     }
 
+Site Handling or Legacy site mode
+---------------------------------
 
-Domain Records and Indexing
----------------------------
+*There are two ways to setup EXT:Solr on your site.*
 
-To enable Solr connections, the extension needs a Domain Record and indexing has to be enabled.
-Therefore enable indexing by setting the following TypoScript:
+.. tip::
 
-.. code-block:: typoscript
+   The "Site Handling mode" is the preferred way for configuring current EXT:Solr and it is only usable,
+   if you are able to enable `new site handling feature <https://docs.typo3.org/m/typo3/reference-coreapi/9.5/en-us/ApiOverview/SiteHandling/Basics.html>`__ for all your sites.
 
-    config {
-        index_enable = 1
-    }
+.. warning::
 
-Also define that your root page is actually a root page:
+   The "Legacy site mode" in EXT:solr 10.0 is kept for backwards compatibility for users, which have had upgraded to TYPO3 9.5 LTS
+   but do not want to use the `new site handling feature <https://docs.typo3.org/m/typo3/reference-coreapi/9.5/en-us/ApiOverview/SiteHandling/Basics.html>`__ currently.
 
-.. image:: /Images/GettingStarted/typo3-root-page.png
 
-Last but not least, add the domain record to the root page:
+Site Handling (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. image:: /Images/GettingStarted/typo3-domain-record.png
+In TYPO3 9.5 the new backend module called "Sites" was introduced.
+This Module can be used to setup and configure the Apache Solr connections.
 
-Initialize Solr Connection
----------------------------
+    .. tip::
 
-Next, initialize the Solr Connection from TYPO3 and check whether everything works as expected.
+        Please refer to `official TYPO3 docs about site handling <https://docs.typo3.org/m/typo3/tutorial-getting-started/9.5/en-us/NextSteps/Integrators/Index.html#site-and-language-handling>`__, to setup your first site configuration.
 
-To initialize the connection, open the Cache-Menu and start Initialization.
+Configure Solr Connections
+""""""""""""""""""""""""""
 
-.. image:: /Images/GettingStarted/typo3-initialize-connections.png
+.. important::
 
-Check whether connections to Solr could be established by opening the *Reports* module and go to
-*Status Report* view:
+    The Site-Handling GUI provides the common setup scenario for most users only.
+    There is no possibility in the GUI to setup different things for each language in site configuration except Corename(core path).
 
-.. image:: /Images/GettingStarted/typo3-check-connections.png
+.. tip::
 
-That's it, head over to :ref:`started-index`.
+    All in sites config.yaml global defined thing for EXT:solr can be configured for each language differently by editing this file manually.
+
+**As first step the authority part of URI to Apache Solr machine must be configured.**
+
+.. image:: ../Images/GettingStarted/Site_handling_Setup_solr_01.jpg
+
+**The Corename(aka path to core) for each available language must be assigned respectively.**
+
+.. image:: ../Images/GettingStarted/Site_handling_Setup_solr_02.jpg
+
+Legacy site mode (not recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning::
+
+   The ability to use this mode will be removed in EXT:solr 11.0.
+
+To follow the steps for this mode please refer to :doc:`Extension Configuration for legacy site mode <ConfigureExtensionLegacySiteMode>`
+

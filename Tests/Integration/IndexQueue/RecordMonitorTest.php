@@ -61,6 +61,7 @@ class RecordMonitorTest extends IntegrationTest
     public function setUp()
     {
         parent::setUp();
+        $this->writeDefaultSolrTestSiteConfiguration();
         $this->recordMonitor = GeneralUtility::makeInstance(RecordMonitor::class);
         $this->dataHandler = GeneralUtility::makeInstance(DataHandler::class);
         $this->indexQueue = GeneralUtility::makeInstance(Queue::class);
@@ -432,22 +433,13 @@ class RecordMonitorTest extends IntegrationTest
 
         $status = 'update';
         $uid = 2;
+        $table = 'pages';
+        $fields = [
+            'title' => 'New Translated Rootpage',
+            'l10n_parent' => 1,
+            'pid' => 0
+        ];
 
-        // @todo the handling for pages_language_overlay can be removed when the TYPO3 8 support is dropped
-        if (Util::getIsTYPO3VersionBelow9()) {
-            $table = 'pages_language_overlay';
-            $fields = [
-                'title' => 'New Translated Rootpage',
-                'pid' => 1
-            ];
-        } else {
-            $table = 'pages';
-            $fields = [
-                'title' => 'New Translated Rootpage',
-                'l10n_parent' => 1,
-                'pid' => 0
-            ];
-        }
         $this->recordMonitor->processDatamap_afterDatabaseOperations($status, $table, $uid, $fields,
             $this->dataHandler);
 
@@ -472,12 +464,7 @@ class RecordMonitorTest extends IntegrationTest
         $uid = 2;
         $fields = ['title' => 'New Translated Rootpage', 'pid' => 1, 'hidden' => 1];
 
-        if (Util::getIsTYPO3VersionBelow9()) {
-            $table = 'pages_language_overlay';
-        } else {
-            $table = 'pages';
-        }
-
+        $table = 'pages';
 
         $this->recordMonitor->processDatamap_afterDatabaseOperations($status, $table, $uid, $fields,
             $this->dataHandler);
@@ -501,13 +488,7 @@ class RecordMonitorTest extends IntegrationTest
         $status = 'update';
         $uid = 2;
         $fields = ['title' => 'New Translated Rootpage', 'pid' => 1];
-
-        // @todo the handling for pages_language_overlay can be removed when the TYPO3 8 support is dropped
-        if (Util::getIsTYPO3VersionBelow9()) {
-            $table = 'pages_language_overlay';
-        } else {
-            $table = 'pages';
-        }
+        $table = 'pages';
 
         $this->recordMonitor->processDatamap_afterDatabaseOperations($status, $table, $uid, $fields,
             $this->dataHandler);
@@ -864,7 +845,7 @@ class RecordMonitorTest extends IntegrationTest
 
         $testConfig = [];
         $testConfig['useConfigurationMonitorTables'] = 'tt_content';
-        $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['solr'] = serialize($testConfig);
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['solr'] = $testConfig;
 
         $status = 'update';
         $table = 'pages';
@@ -877,7 +858,7 @@ class RecordMonitorTest extends IntegrationTest
             $this->dataHandler);
 
         $testConfig = [];
-        $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['solr'] = serialize($testConfig);
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['solr'] = $testConfig;
 
         $this->assertEmptyIndexQueue();
     }
@@ -892,7 +873,7 @@ class RecordMonitorTest extends IntegrationTest
 
         $testConfig = [];
         $testConfig['useConfigurationMonitorTables'] = 'pages, tt_content';
-        $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['solr'] = serialize($testConfig);
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['solr'] = $testConfig;
 
         $status = 'update';
         $table = 'pages';
@@ -905,8 +886,46 @@ class RecordMonitorTest extends IntegrationTest
             $this->dataHandler);
 
         $testConfig = [];
-        $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['solr'] = serialize($testConfig);
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['solr'] = $testConfig;
 
+        $this->assertIndexQueueContainsItemAmount(1);
+    }
+
+    /**
+     * This testcase checks if we can create a new testpage on the root level without any errors.
+     *
+     * @test
+     */
+    public function canCreateSiteOneRootLevel()
+    {
+        $this->importDataSetFromFixture('can_create_new_page.xml');
+        $this->setUpBackendUserFromFixture(1);
+
+        $this->assertIndexQueueContainsItemAmount(0);
+        $dataHandler = $this->getDataHandler();
+        $dataHandler->start(['pages' => ['NEW' => ['hidden' => 0]]], []);
+        $dataHandler->process_datamap();
+
+        // the item is outside a siteroot so we should not have any queue entry
+        $this->assertIndexQueueContainsItemAmount(0);
+    }
+
+    /**
+     * This testcase checks if we can create a new testpage on the root level without any errors.
+     *
+     * @test
+     */
+    public function canCreateSubPageBelowSiteRoot()
+    {
+        $this->importDataSetFromFixture('can_create_new_page.xml');
+        $this->setUpBackendUserFromFixture(1);
+
+        $this->assertIndexQueueContainsItemAmount(0);
+        $dataHandler = $this->getDataHandler();
+        $dataHandler->start(['pages' => ['NEW' => ['hidden' => 0, 'pid' => 1]]], []);
+        $dataHandler->process_datamap();
+
+        // we should have one item in the solr queue
         $this->assertIndexQueueContainsItemAmount(1);
     }
 }

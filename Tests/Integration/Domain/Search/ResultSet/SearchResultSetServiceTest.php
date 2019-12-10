@@ -35,6 +35,10 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class SearchResultSetServiceTest extends IntegrationTest
 {
+    public function setUp() {
+        parent::setUp();
+        $this->writeDefaultSolrTestSiteConfiguration();
+    }
 
     /**
      * Executed after each test. Emptys solr and checks if the index is empty
@@ -55,8 +59,8 @@ class SearchResultSetServiceTest extends IntegrationTest
 
         $this->waitToBeVisibleInSolr();
 
-        $solrContent = file_get_contents('http://localhost:8999/solr/core_en/select?q=*:*');
-        $this->assertContains('23c51a0d5cf548afecc043a7068902e8f82a22a0/pages/1/0/0/0', $solrContent);
+        $solrContent = file_get_contents($this->getSolrConnectionUriAuthority() . '/solr/core_en/select?q=*:*');
+        $this->assertContains('002de2729efa650191f82900ea02a0a3189dfabb/pages/1/0/0/0', $solrContent);
 
         $solrConnection = GeneralUtility::makeInstance(ConnectionManager::class)->getConnectionByPageId(1, 0, 0);
 
@@ -65,7 +69,7 @@ class SearchResultSetServiceTest extends IntegrationTest
         $search = GeneralUtility::makeInstance(Search::class, $solrConnection);
         /** @var $searchResultsSetService SearchResultSetService */
         $searchResultsSetService = GeneralUtility::makeInstance(SearchResultSetService::class, $typoScriptConfiguration, $search);
-        $document = $searchResultsSetService->getDocumentById('23c51a0d5cf548afecc043a7068902e8f82a22a0/pages/1/0/0/0');
+        $document = $searchResultsSetService->getDocumentById('002de2729efa650191f82900ea02a0a3189dfabb/pages/1/0/0/0');
 
         $this->assertSame($document->getTitle(), 'Products', 'Could not get document from solr by id');
     }
@@ -185,7 +189,7 @@ class SearchResultSetServiceTest extends IntegrationTest
     {
         $this->indexPageIdsFromFixture('fe_user_page.xml', [1, 2, 3], [1]);
         $this->waitToBeVisibleInSolr();
-        $solrContent = file_get_contents('http://localhost:8999/solr/core_en/select?q=*:*');
+        $solrContent = file_get_contents($this->getSolrConnectionUriAuthority() . '/solr/core_en/select?q=*:*');
         $this->assertContains('"numFound":3', $solrContent);
     }
 

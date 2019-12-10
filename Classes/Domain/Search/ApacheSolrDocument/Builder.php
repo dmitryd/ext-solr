@@ -27,7 +27,7 @@ namespace ApacheSolrForTypo3\Solr\Domain\Search\ApacheSolrDocument;
 use ApacheSolrForTypo3\Solr\Access\Rootline;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
 use ApacheSolrForTypo3\Solr\Domain\Variants\IdBuilder;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Solr\Document\Document;
 use ApacheSolrForTypo3\Solr\Typo3PageContentExtractor;
 use ApacheSolrForTypo3\Solr\Util;
@@ -102,6 +102,7 @@ class Builder
         $this->addEndtimeField($document, $pageRecord);
 
         // content
+        // @extensionScannerIgnoreLine
         $contentExtractor = $this->getExtractorForPageContent($page->content);
         $document->setField('title', $contentExtractor->getPageTitle());
         $document->setField('subTitle', $pageRecord['subtitle']);
@@ -179,9 +180,9 @@ class Builder
      * @param string $mountPointParameter
      * @return string
      */
-    protected function getPageDocumentId(TypoScriptFrontendController $page, string $accessGroups, string $mountPointParameter): string
+    protected function getPageDocumentId(TypoScriptFrontendController $frontendController, string $accessGroups, string $mountPointParameter): string
     {
-        return Util::getPageDocumentId($page->id, $page->type, $page->sys_language_uid, $accessGroups, $mountPointParameter);
+        return Util::getPageDocumentId($frontendController->id, $frontendController->type, Util::getLanguageUid(), $accessGroups, $mountPointParameter);
     }
 
     /**

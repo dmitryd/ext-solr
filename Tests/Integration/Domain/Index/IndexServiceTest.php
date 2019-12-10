@@ -28,11 +28,15 @@ use ApacheSolrForTypo3\Solr\Domain\Index\IndexService;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
 use ApacheSolrForTypo3\Solr\IndexQueue\Queue;
 use ApacheSolrForTypo3\Solr\System\Environment\CliEnvironment;
+use ApacheSolrForTypo3\Solr\System\Environment\WebRootAllReadyDefinedException;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
+use Nimut\TestingFramework\Exception\Exception;
+use ReflectionException;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Charset\CharsetConverter;
+use TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Lang\LanguageService;
+use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Testcase for the record indexer
@@ -49,64 +53,57 @@ class IndexServiceTest extends IntegrationTest
 
     /**
      * @return void
+     * @throws NoSuchCacheException
      */
     public function setUp()
     {
         parent::setUp();
+
+        $this->writeDefaultSolrTestSiteConfiguration();
         $this->indexQueue = GeneralUtility::makeInstance(Queue::class);
 
-        /** @var $beUser  \TYPO3\CMS\Core\Authentication\BackendUserAuthentication */
+        /** @var $beUser  BackendUserAuthentication */
         $beUser = GeneralUtility::makeInstance(BackendUserAuthentication::class);
         $GLOBALS['BE_USER'] = $beUser;
 
-        /** @var $languageService  \TYPO3\CMS\Lang\LanguageService */
+        /** @var $languageService  LanguageService */
         $languageService = GeneralUtility::makeInstance(LanguageService::class);
-        $languageService->csConvObj = GeneralUtility::makeInstance(CharsetConverter::class);
+
         $GLOBALS['LANG'] = $languageService;
     }
 
     /**
      * @param string $table
      * @param int $uid
-     * @return \Apache_Solr_Response
+     * @return void
      */
-    protected function addToIndexQueue($table, $uid)
+    protected function addToIndexQueue($table, $uid): void
     {
         // write an index queue item
         $this->indexQueue->updateItem($table, $uid, time());
     }
 
-    public function canResolveAbsRefPrefixDataProvider()
+    public function canResolveBaseAsPrefixDataProvider()
     {
         return [
-            'absRefPrefixIsAuto' => [
-                'absRefPrefix' => 'auto',
-                'expectedUrl' => '/index.php?id=1&tx_ttnews%5Btt_news%5D=111&L=0',
-            ],
-            'absRefPrefixIsSlash' => [
-                'absRefPrefix' => 'slash',
-                'expectedUrl' => '/index.php?id=1&tx_ttnews%5Btt_news%5D=111&L=0',
-            ],
             'absRefPrefixIsFoo' => [
                 'absRefPrefix' => 'foo',
-                'expectedUrl' => '/foo/index.php?id=1&tx_ttnews%5Btt_news%5D=111&L=0',
-            ],
-            'absRefPrefixIsNone' => [
-                'absRefPrefix' => 'none',
-                'expectedUrl' => 'index.php?id=1&tx_ttnews%5Btt_news%5D=111&L=0',
+                'expectedUrl' => '/foo/en/?tx_ttnews%5Btt_news%5D=111&cHash=a14e458509b71459d1edaafd1d5a84a1',
             ]
         ];
     }
 
     /**
-     * @dataProvider canResolveAbsRefPrefixDataProvider
+     * @dataProvider canResolveBaseAsPrefixDataProvider
      * @param string $absRefPrefix
      * @param string $expectedUrl
-     * @throws \ApacheSolrForTypo3\Solr\System\Environment\WebRootAllReadyDefinedException
-     * @throws \TYPO3\CMS\Core\Tests\Exception
+     * @throws WebRootAllReadyDefinedException
+     * @throws Exception
+     * @throws ReflectionException
+     * @throws \Exception
      * @test
      */
-    public function canResolveAbsRefPrefix($absRefPrefix, $expectedUrl)
+    public function canResolveBaseAsPrefix($absRefPrefix, $expectedUrl)
     {
         $this->cleanUpSolrServerAndAssertEmpty();
 
@@ -115,15 +112,18 @@ class IndexServiceTest extends IntegrationTest
         $GLOBALS['TCA']['tx_fakeextension_domain_model_bar'] = include($this->getFixturePathByName('fake_extension2_bar_tca.php'));
         $GLOBALS['TCA']['tx_fakeextension_domain_model_directrelated'] = include($this->getFixturePathByName('fake_extension2_directrelated_tca.php'));
 
-        $this->importDataSetFromFixture('can_index_custom_record_absRefPrefix_' . $absRefPrefix . '.xml');
+        $this->importDataSetFromFixture('can_index_custom_record_withBasePrefix_' . $absRefPrefix . '.xml');
+
+        $this->mergeSiteConfiguration('integration_tree_one', ['base' => '/' . $absRefPrefix . '/']);
 
         $this->addToIndexQueue('tx_fakeextension_domain_model_bar', 111);
 
         /** @var  $cliEnvironment CliEnvironment */
         $cliEnvironment = GeneralUtility::makeInstance(CliEnvironment::class);
         $cliEnvironment->backup();
-        $cliEnvironment->initialize(PATH_site);
+        $cliEnvironment->initialize(Environment::getPublicPath() . '/');
 
+        /* @var SiteRepository $siteRepository */
         $siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
         $site = $siteRepository->getFirstAvailableSite();
         /** @var $indexService IndexService */
@@ -136,10 +136,9 @@ class IndexServiceTest extends IntegrationTest
 
         // do we have the record in the index with the value from the mm relation?
         $this->waitToBeVisibleInSolr();
-        $solrContent = file_get_contents('http://localhost:8999/solr/core_en/select?q=*:*');
+        $solrContent = file_get_contents($this->getSolrConnectionUriAuthority() . '/solr/core_en/select?q=*:*');
         $this->assertContains('"numFound":1', $solrContent, 'Could not index document into solr');
         $this->assertContains('"url":"' . $expectedUrl, $solrContent, 'Generated unexpected url with absRefPrefix = auto');
-        $this->assertNotContains('auto', $solrContent, 'absRefPrefix=auto was not resolved');
         $this->cleanUpSolrServerAndAssertEmpty();
     }
 }

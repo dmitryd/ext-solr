@@ -32,6 +32,7 @@ use ApacheSolrForTypo3\Solr\NoSolrConnectionFoundException;
 use ApacheSolrForTypo3\Solr\Search;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
 use ApacheSolrForTypo3\Solr\System\Solr\Document\Document;
+use ApacheSolrForTypo3\Solr\System\Solr\SolrCommunicationException;
 use ApacheSolrForTypo3\Solr\System\Solr\SolrConnection;
 use ApacheSolrForTypo3\Solr\Util;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -105,8 +106,11 @@ class Repository implements SingletonInterface
             $response = $this->search->search($pageQuery, 0, 10000);
         } catch (NoSolrConnectionFoundException $exception) {
             return [];
+        } catch (SolrCommunicationException $exception) {
+            return [];
         }
         $data = $response->getParsedData();
+        // @extensionScannerIgnoreLine
         return $this->documentEscapeService->applyHtmlSpecialCharsOnAllFields($data->response->docs ?? []);
     }
 
@@ -125,8 +129,11 @@ class Repository implements SingletonInterface
             $response = $this->search->search($recordQuery, 0, 10000);
         } catch (NoSolrConnectionFoundException $exception) {
             return [];
+        } catch (SolrCommunicationException $exception) {
+            return [];
         }
         $data = $response->getParsedData();
+        // @extensionScannerIgnoreLine
         return $this->documentEscapeService->applyHtmlSpecialCharsOnAllFields($data->response->docs ?? []);
     }
 

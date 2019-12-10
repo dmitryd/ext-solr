@@ -26,7 +26,7 @@ namespace ApacheSolrForTypo3\Solr\Controller\Backend\Search;
 
 use ApacheSolrForTypo3\Solr\ConnectionManager;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Solr\SolrConnection as SolrCoreConnection;
 use ApacheSolrForTypo3\Solr\System\Mvc\Backend\Component\Exception\InvalidViewObjectNameException;
 use ApacheSolrForTypo3\Solr\System\Mvc\Backend\Service\ModuleDataStorageService;
@@ -76,6 +76,11 @@ abstract class AbstractModuleController extends ActionController
     protected $selectedSite;
 
     /**
+     * @var SiteRepository
+     */
+    protected $siteRepository;
+
+    /**
      * @var SolrCoreConnection
      */
     protected $selectedSolrCoreConnection;
@@ -96,6 +101,22 @@ abstract class AbstractModuleController extends ActionController
     protected $moduleDataStorageService = null;
 
     /**
+     * @param Site $selectedSite
+     */
+    public function setSelectedSite(Site $selectedSite)
+    {
+        $this->selectedSite = $selectedSite;
+    }
+
+    /**
+     * @param SiteRepository $siteRepository
+     */
+    public function injectSiteRepository(SiteRepository $siteRepository)
+    {
+        $this->siteRepository = $siteRepository;
+    }
+
+    /**
      * Initializes the controller and sets needed vars.
      */
     protected function initializeAction()
@@ -111,13 +132,7 @@ abstract class AbstractModuleController extends ActionController
 
         $this->requestedPageUID = $this->selectedPageUID;
 
-        /* @var SiteRepository $siteRepository */
-        $siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
-
-        // Autoselect the only one available site
-        if (count($siteRepository->getAvailableSites()) == 1) {
-            $this->selectedSite = $siteRepository->getFirstAvailableSite();
-            $this->selectedPageUID = $this->selectedSite->getRootPageId();
+        if ($this->autoSelectFirstSiteAndRootPageWhenOnlyOneSiteIsAvailable()) {
             return;
         }
 
@@ -126,10 +141,29 @@ abstract class AbstractModuleController extends ActionController
         }
 
         try {
-            $this->selectedSite = $siteRepository->getSiteByPageId($this->selectedPageUID);
+            $this->selectedSite = $this->siteRepository->getSiteByPageId($this->selectedPageUID);
         } catch (\InvalidArgumentException $exception) {
             return;
         }
+    }
+
+    /**
+     * @return bool
+     * @throws \Exception
+     */
+    protected function autoSelectFirstSiteAndRootPageWhenOnlyOneSiteIsAvailable(): bool
+    {
+        if (count($this->siteRepository->getAvailableSites()) == 1) {
+            $this->selectedSite = $this->siteRepository->getFirstAvailableSite();
+
+            // we only overwrite the selected pageUid when no id was passed
+            if ($this->selectedPageUID === 0) {
+                $this->selectedPageUID = $this->selectedSite->getRootPageId();
+            }
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -141,9 +175,7 @@ abstract class AbstractModuleController extends ActionController
     protected function initializeView(ViewInterface $view)
     {
         parent::initializeView($view);
-        /* @var SiteRepository $siteRepository */
-        $siteRepository = GeneralUtility::makeInstance(SiteRepository::class);
-        $sites = $siteRepository->getAvailableSites();
+        $sites = $this->siteRepository->getAvailableSites();
 
         $selectOtherPage = count($sites) > 0 || $this->selectedPageUID < 1;
         $this->view->assign('showSelectOtherPage', $selectOtherPage);

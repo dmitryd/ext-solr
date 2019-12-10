@@ -1,0 +1,24 @@
+version: '2'
+services:
+  ######################################
+  # CI
+  ######################################
+  ci:
+    restart: 'no'
+    build:
+      context: ../../
+      dockerfile: ./Docker/Ci/Dockerfile
+      args:
+        PHP_VERSION: 7.2
+    command: /sbin/init
+    working_dir: /app
+    env_file:
+      - environment.yml
+
+  t3docmake:
+    image: t3docs/render-documentation:latest
+    restart: 'no'
+    volumes:
+      - ../../:/PROJECT:ro
+      - ../../.Build/Documentation-GENERATED-temp:/RESULT
+    command: makehtml

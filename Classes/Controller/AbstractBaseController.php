@@ -17,12 +17,14 @@ namespace ApacheSolrForTypo3\Solr\Controller;
 use ApacheSolrForTypo3\Solr\ConnectionManager;
 use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSetService;
 use ApacheSolrForTypo3\Solr\Domain\Search\SearchRequestBuilder;
+use ApacheSolrForTypo3\Solr\NoSolrConnectionFoundException;
 use ApacheSolrForTypo3\Solr\Search;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
 use ApacheSolrForTypo3\Solr\Mvc\Controller\SolrControllerContext;
 use ApacheSolrForTypo3\Solr\System\Logging\SolrLogManager;
 use ApacheSolrForTypo3\Solr\System\Service\ConfigurationService;
 use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationManager as SolrConfigurationManager;
+use ApacheSolrForTypo3\Solr\Util;
 use TYPO3\CMS\Core\TypoScript\TypoScriptService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
@@ -93,6 +95,7 @@ abstract class AbstractBaseController extends ActionController
     public function injectConfigurationManager(ConfigurationManagerInterface $configurationManager)
     {
         $this->configurationManager = $configurationManager;
+        // @extensionScannerIgnoreLine
         $this->contentObjectRenderer = $this->configurationManager->getContentObject();
     }
 
@@ -189,7 +192,10 @@ abstract class AbstractBaseController extends ActionController
         parent::initializeAction();
         $this->typoScriptFrontendController = $GLOBALS['TSFE'];
         $this->initializeSettings();
-        $this->initializeSearch();
+
+        if ($this->actionMethodName !== 'solrNotAvailableAction') {
+            $this->initializeSearch();
+        }
     }
 
     /**
@@ -215,14 +221,18 @@ abstract class AbstractBaseController extends ActionController
     protected function initializeSearch()
     {
         /** @var \ApacheSolrForTypo3\Solr\ConnectionManager $solrConnection */
-        $solrConnection = GeneralUtility::makeInstance(ConnectionManager::class)->getConnectionByPageId($this->typoScriptFrontendController->id, $this->typoScriptFrontendController->sys_language_uid, $this->typoScriptFrontendController->MP);
-        $search = GeneralUtility::makeInstance(Search::class, $solrConnection);
+        try {
+            $solrConnection = GeneralUtility::makeInstance(ConnectionManager::class)->getConnectionByPageId($this->typoScriptFrontendController->id, Util::getLanguageUid(), $this->typoScriptFrontendController->MP);
+            $search = GeneralUtility::makeInstance(Search::class, $solrConnection);
 
-        $this->searchService = GeneralUtility::makeInstance(
-            SearchResultSetService::class,
-            /** @scrutinizer ignore-type */ $this->typoScriptConfiguration,
-            /** @scrutinizer ignore-type */ $search
-        );
+            $this->searchService = GeneralUtility::makeInstance(
+                SearchResultSetService::class,
+                /** @scrutinizer ignore-type */ $this->typoScriptConfiguration,
+                /** @scrutinizer ignore-type */ $search
+            );
+        } catch (NoSolrConnectionFoundException $e) {
+            $this->handleSolrUnavailable();
+        }
     }
 
     /**

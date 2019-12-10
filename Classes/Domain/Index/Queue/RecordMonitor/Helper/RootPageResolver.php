@@ -26,13 +26,14 @@ namespace ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
-use ApacheSolrForTypo3\Solr\Site;
+use ApacheSolrForTypo3\Solr\Domain\Site\Site;
 use ApacheSolrForTypo3\Solr\System\Cache\TwoLevelCache;
 use ApacheSolrForTypo3\Solr\System\Configuration\ExtensionConfiguration;
 use ApacheSolrForTypo3\Solr\System\Page\Rootline;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\RootlineUtility;
 use TYPO3\CMS\Frontend\Page\PageRepository;
 
 /**
@@ -167,11 +168,9 @@ class RootPageResolver implements SingletonInterface
 
         // fallback, backend
         if ($pageId != 0 && ($forceFallback || !$rootLine->getHasRootPage())) {
-            /* @var $pageSelect PageRepository */
-            $pageSelect = GeneralUtility::makeInstance(PageRepository::class);
-
+            $rootlineUtility = GeneralUtility::makeInstance(RootlineUtility::class, $pageId, $mountPointIdentifier);
             try {
-                $rootLineArray = $pageSelect->getRootLine($pageId, $mountPointIdentifier);
+                $rootLineArray = $rootlineUtility->get();
             } catch (\RuntimeException $e) {
                 $rootLineArray = [];
             }
