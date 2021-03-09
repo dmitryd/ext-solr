@@ -19,10 +19,10 @@ use ApacheSolrForTypo3\Solr\Domain\Search\Query\Query;
 use ApacheSolrForTypo3\Solr\Domain\Search\SearchRequest;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
 use ApacheSolrForTypo3\Solr\System\Solr\ResponseAdapter;
+use ApacheSolrForTypo3\Solr\Tests\Unit\Helper\FakeObjectManager;
 use ApacheSolrForTypo3\Solr\Tests\Unit\UnitTest;
 use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\Facets\AbstractFacetParser;
 use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSet;
-use ApacheSolrForTypo3\Solr\Tests\Unit\Helper\FakeObjectManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -84,7 +84,10 @@ abstract class AbstractFacetParserTest extends UnitTest
     {
         $parser = GeneralUtility::makeInstance($className);
         // @extensionScannerIgnoreLine
-        $parser->injectObjectManager(new FakeObjectManager());
+
+        $fakeObjectManager = new FakeObjectManager();
+
+        $parser->injectObjectManager($fakeObjectManager);
 
         return $parser;
     }

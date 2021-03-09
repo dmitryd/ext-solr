@@ -25,14 +25,11 @@ namespace ApacheSolrForTypo3\Solr\Tests\Integration\IndexQueue;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\IndexQueue\Item;
-use ApacheSolrForTypo3\Solr\IndexQueue\NoPidException;
 use ApacheSolrForTypo3\Solr\IndexQueue\Queue;
 use ApacheSolrForTypo3\Solr\IndexQueue\RecordMonitor;
 use ApacheSolrForTypo3\Solr\System\Logging\SolrLogManager;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
-use ApacheSolrForTypo3\Solr\Util;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
-use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -65,6 +62,12 @@ class RecordMonitorTest extends IntegrationTest
         $this->recordMonitor = GeneralUtility::makeInstance(RecordMonitor::class);
         $this->dataHandler = GeneralUtility::makeInstance(DataHandler::class);
         $this->indexQueue = GeneralUtility::makeInstance(Queue::class);
+    }
+
+    public function tearDown()
+    {
+        unset($this->recordMonitor, $this->dataHandler, $this->indexQueue);
+        parent::tearDown();
     }
 
     /**
@@ -217,6 +220,29 @@ class RecordMonitorTest extends IntegrationTest
         // we expect that all subpages of 1 have been requeued, but 1 not because it is still hidden
         // pages with uid 10 and 100 should be in index, but 11 not
         $this->assertIndexQueueContainsItemAmount(2);
+    }
+
+    /**
+     * @test
+     */
+    public function canQueueSubPagesWhenHiddenAndExtendToSubPagesFlagsWereRemoved()
+    {
+        $this->importDataSetFromFixture('reindex_subpages_when_hidden_and_extendToSubpage_flags_removed.xml');
+
+        // we expect that the index queue is empty before we start
+        $this->assertEmptyIndexQueue();
+
+        // simulate the database change and build a faked changeset
+        $connection = $this->getDatabaseConnection();
+        $connection->updateArray('pages', ['uid' => 1], ['extendToSubpages' => 0, 'hidden' => 0]);
+        $changeSet = ['extendToSubpages' => 0, 'hidden' => 0];
+
+        $dataHandler = $this->dataHandler;
+        $this->recordMonitor->processDatamap_afterDatabaseOperations('update', 'pages', 1, $changeSet, $dataHandler);
+
+        // we expect that page 1 incl. subpages has been requeued
+        // pages with uid 10, 11 and 100 should be in index
+        $this->assertIndexQueueContainsItemAmount(3);
     }
 
     /**
@@ -728,6 +754,51 @@ class RecordMonitorTest extends IntegrationTest
             $this->dataHandler);
 
         $this->assertIndexQueueContainsItemAmount(1);
+    }
+
+    /**
+     * @return array
+     */
+    public function updateRecordOutsideSiteRootWithAdditionalWhereClauseDataProvider(): array
+    {
+        return [
+            'record-1' => [
+                'uid' => 1,
+                'root' => 1
+            ],
+            'record-2' => [
+                'uid' => 2,
+                'root' => 111
+            ]
+        ];
+    }
+
+    /**
+     * @dataProvider updateRecordOutsideSiteRootWithAdditionalWhereClauseDataProvider
+     * @test
+     */
+    public function updateRecordOutsideSiteRootWithAdditionalWhereClause($uid, $root)
+    {
+        $this->importExtTablesDefinition('fake_extension_table.sql');
+        $GLOBALS['TCA']['tx_fakeextension_domain_model_foo'] = include($this->getFixturePathByName('fake_extension_tca.php'));
+
+        $this->importDataSetFromFixture('update_record_outside_siteroot_with_additionalWhereClause.xml');
+
+        $this->assertEmptyIndexQueue();
+
+        // create faked tce main call data
+        $status = 'update';
+        $table = 'tx_fakeextension_domain_model_foo';
+        $fields = [
+            'title' => 'foo',
+            'pid' => 2
+        ];
+        $this->recordMonitor->processDatamap_afterDatabaseOperations($status, $table, $uid, $fields, $this->dataHandler);
+        $this->assertIndexQueueContainsItemAmount(1);
+        $firstQueueItem = $this->indexQueue->getItem(1);
+        $this->assertSame($uid, $firstQueueItem->getRecordUid());
+        $this->assertSame($root, $firstQueueItem->getRootPageUid());
+
     }
 
     /**

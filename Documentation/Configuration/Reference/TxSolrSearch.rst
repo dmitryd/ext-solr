@@ -7,7 +7,7 @@
 
 
 tx_solr.search
-===============
+==============
 
 The search section, you probably already guessed it, provides configuration options for the all things related to actually searching the index, setting query parameters, formatting and processing result documents and the result listing.
 
@@ -588,7 +588,7 @@ lastSearches
 :Since: 1.3-dkd
 :Default: 0
 
-Set `plugin.tx_solr.lastSearches = 1` to display a list of the last searches.
+Set `plugin.tx_solr.search.lastSearches = 1` to display a list of the last searches.
 
 lastSearches.limit
 ~~~~~~~~~~~~~~~~~~
@@ -1424,6 +1424,8 @@ variants.limit
 ~~~~~~~~~~~~~~
 
 Limit of expanded documents.
+
+Though this setting limits the returned variants, you still can get the number of existing variants, it's set in "document.variantsNumFound" (since EXT:solr 10)
 
 :Type: Integer
 :TS Path: plugin.tx_solr.search.variants.limit

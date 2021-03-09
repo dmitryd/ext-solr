@@ -34,8 +34,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * An implementation ob a garbage remover strategy is responsible to remove all garbage from the index queue and
  * the solr server for a certain table and uid combination.
- *
- * @package ApacheSolrForTypo3\Solr\Domain\Index\Queue\GarbageRemover
  */
 abstract class AbstractStrategy
 {
@@ -114,7 +112,7 @@ abstract class AbstractStrategy
      * @param string $table The record's table name.
      * @param int $uid The record's uid.
      */
-    protected function deleteIndexDocuments($table, $uid)
+    protected function deleteIndexDocuments($table, $uid, $language = 0)
     {
         // record can be indexed for multiple sites
         $indexQueueItems = $this->queue->getItems($table, $uid);
@@ -124,6 +122,9 @@ abstract class AbstractStrategy
             $siteHash = $site->getSiteHash();
             // a site can have multiple connections (cores / languages)
             $solrConnections = $this->connectionManager->getConnectionsBySite($site);
+            if ($language > 0) {
+                $solrConnections = [$language => $solrConnections[$language]];
+            }
             $this->deleteRecordInAllSolrConnections($table, $uid, $solrConnections, $siteHash, $enableCommitsSetting);
         }
     }

@@ -30,8 +30,8 @@ use ApacheSolrForTypo3\Solr\Domain\Search\SearchRequest;
 use ApacheSolrForTypo3\Solr\Search;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
 use ApacheSolrForTypo3\Solr\Util;
-use TYPO3\CMS\Core\Http\ImmediateResponseException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\Result\SearchResult;
 
 class SearchResultSetServiceTest extends IntegrationTest
 {
@@ -120,6 +120,72 @@ class SearchResultSetServiceTest extends IntegrationTest
     /**
      * @test
      */
+    public function canGetCaseSensitiveVariants()
+    {
+        $this->indexPageIdsFromFixture('can_get_searchResultSet.xml', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+        $this->waitToBeVisibleInSolr();
+        $solrConnection = GeneralUtility::makeInstance(ConnectionManager::class)->getConnectionByPageId(1, 0, 0);
+
+        $typoScriptConfiguration = Util::getSolrConfiguration();
+        $typoScriptConfiguration->mergeSolrConfiguration([
+            'search.' =>[
+                'variants' => 1,
+                'variants.' => [
+                    'variantField' => 'author',
+                    'expand' => 1,
+                    'limit' => 11
+                ]
+            ]
+        ]);
+
+        $this->assertTrue($typoScriptConfiguration->getSearchVariants(), 'Variants are not enabled');
+        $this->assertEquals('author', $typoScriptConfiguration->getSearchVariantsField());
+        $this->assertEquals(11, $typoScriptConfiguration->getSearchVariantsLimit());
+
+        $searchResults = $this->doSearchWithResultSetService($solrConnection, $typoScriptConfiguration);
+        $this->assertSame(3, count($searchResults), 'There should be three results at all');
+
+
+        // We assume that the first result has one variants.
+        /* @var SearchResult $firstResult */
+        $firstResult = $searchResults[0];
+        $this->assertSame(6, count($firstResult->getVariants()));
+        $this->assertSame('John Doe', $firstResult->getAuthor());
+        $this->assertSame(6, $firstResult->getVariantsNumFound());
+        $this->assertSame('John Doe', $firstResult->getVariantFieldValue());
+
+        /* @var SearchResult $secondResult */
+        $secondResult = $searchResults[1];
+        $this->assertSame(2, count($secondResult->getVariants()));
+        $this->assertSame('Jane Doe', $secondResult->getAuthor());
+        $this->assertSame(2, $secondResult->getVariantsNumFound());
+        $this->assertSame('Jane Doe', $secondResult->getVariantFieldValue());
+
+        /* @var SearchResult $secondResult */
+        $thirdResult = $searchResults[2];
+        $this->assertSame(0, count($thirdResult->getVariants()));
+        $this->assertSame('Baby Doe', $thirdResult->getAuthor());
+        $this->assertSame(0, $thirdResult->getVariantsNumFound());
+        $this->assertSame('Baby Doe', $thirdResult->getVariantFieldValue());
+
+        // And every variant is indicated to be a variant.
+        foreach ($firstResult->getVariants() as $variant) {
+            $this->assertTrue($variant->getIsVariant(), 'Document should be a variant');
+            $this->assertSame(0, $variant->getVariantsNumFound(), 'Variant shouldn\'t have variants itself');
+            $this->assertSame($firstResult, $variant->getVariantParent(), 'Variant parent should be set');
+        }
+        foreach ($secondResult->getVariants() as $variant) {
+            $this->assertTrue($variant->getIsVariant(), 'Document should be a variant');
+            $this->assertSame(0, $variant->getVariantsNumFound(), 'Variant shouldn\'t have variants itself');
+            $this->assertSame($secondResult, $variant->getVariantParent(), 'Variant parent should be set');
+        }
+
+    }
+
+    /**
+     * @test
+     */
     public function canGetZeroResultsWithVariantsOnEmptyIndex()
     {
         $this->importDataSetFromFixture('can_get_searchResultSet.xml');
@@ -203,14 +269,18 @@ class SearchResultSetServiceTest extends IntegrationTest
     {
         $search = GeneralUtility::makeInstance(Search::class, $solrConnection);
         /** @var $searchResultsSetService SearchResultSetService */
-        $searchResultsSetService = GeneralUtility::makeInstance(SearchResultSetService::class, $typoScriptConfiguration, $search);
+        $searchResultSetService = GeneralUtility::makeInstance(SearchResultSetService::class, $typoScriptConfiguration, $search);
+
+        $fakeObjectManager = $this->getFakeObjectManager();
+
+        $searchResultSetService->injectObjectManager($fakeObjectManager);
 
         /** @var $searchRequest SearchRequest */
         $searchRequest = GeneralUtility::makeInstance(SearchRequest::class, [], 0, 0, $typoScriptConfiguration);
         $searchRequest->setRawQueryString($queryString);
         $searchRequest->setResultsPerPage(10);
 
-        $searchResultSet = $searchResultsSetService->search($searchRequest);
+        $searchResultSet = $searchResultSetService->search($searchRequest);
 
         $searchResults = $searchResultSet->getSearchResults();
         return $searchResults;

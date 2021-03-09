@@ -35,7 +35,6 @@ use TYPO3\CMS\Core\Site\Entity\Site as Typo3Site;
 
 /**
  * Class Typo3ManagedSite
- * @package ApacheSolrForTypo3\Solr\Domain\Site
  */
 class Typo3ManagedSite extends Site
 {
@@ -64,16 +63,6 @@ class Typo3ManagedSite extends Site
         $this->availableLanguageIds = $availableLanguageIds;
         $this->solrConnectionConfigurations = $solrConnectionConfigurations;
         $this->typo3SiteObject = $typo3SiteObject;
-    }
-
-    /**
-     * @param int $languageUid
-     * @return array
-     */
-    public function getFallbackOrder(int $languageUid): array
-    {
-        $languageAspect = LanguageAspectFactory::createFromSiteLanguage($this->typo3SiteObject->getLanguageById($languageUid));
-        return $languageAspect->getFallbackChain();
     }
 
     /**

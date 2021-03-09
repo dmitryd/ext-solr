@@ -1,5 +1,5 @@
 <?php
-namespace ApacheSolrForTypo3\Solr\Test\Domain\Search\ResultSet;
+namespace ApacheSolrForTypo3\Solr\Tests\Integration\Domain\Search\ResultSet;
 
 /***************************************************************
  *  Copyright notice
@@ -32,13 +32,6 @@ use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\ResultSetReconstitutionProce
 use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSet;
 use ApacheSolrForTypo3\Solr\System\Solr\ResponseAdapter;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
-use ApacheSolrForTypo3\Solr\Tests\Unit\Helper\FakeObjectManager;
-use TYPO3\CMS\Core\TimeTracker\TimeTracker;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
-use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
-use TYPO3\CMS\Frontend\ContentObject\CaseContentObject;
-use TYPO3\CMS\Frontend\ContentObject\TextContentObject;
 
 /**
  * Unit test case for the ObjectReconstitutionProcessor.
@@ -70,7 +63,9 @@ class ResultSetReconstitutionProcessorTest extends IntegrationTest
      */
     public function canApplyRenderingInstructionsOnOptions()
     {
-        $this->fakeTSFEToUseCObject();
+        $this->importDataSetFromFixture('simple_site.xml');
+        $this->writeDefaultSolrTestSiteConfiguration();
+        $this->fakeTSFE(1);
 
         $searchResultSet = $this->initializeSearchResultSetFromFakeResponse('fake_solr_response_with_multiple_fields_facets.json');
 
@@ -119,7 +114,9 @@ class ResultSetReconstitutionProcessorTest extends IntegrationTest
      */
     public function labelCanBeUsedAsCObject()
     {
-        $this->fakeTSFEToUseCObject();
+        $this->importDataSetFromFixture('simple_site.xml');
+        $this->writeDefaultSolrTestSiteConfiguration();
+        $this->fakeTSFE(1);
         $searchResultSet = $this->initializeSearchResultSetFromFakeResponse('fake_solr_response_with_multiple_fields_facets.json');
 
         // before the reconstitution of the domain object from the response we expect that no facets
@@ -171,21 +168,8 @@ class ResultSetReconstitutionProcessorTest extends IntegrationTest
         $searchResultSet->getUsedSearchRequest()->expects($this->any())->method('getActiveFacetNames')->will($this->returnValue([]));
 
         $processor = new ResultSetReconstitutionProcessor();
-        $processor->setObjectManager(new FakeObjectManager());
+        $fakeObjectManager = $this->getFakeObjectManager();
+        $processor->setObjectManager($fakeObjectManager);
         return $processor;
-    }
-
-    /**
-     *
-     */
-    protected function fakeTSFEToUseCObject()
-    {
-        $GLOBALS['TYPO3_CONF_VARS']['FE']['ContentObjects'] = array_merge($GLOBALS['TYPO3_CONF_VARS']['FE']['ContentObjects'], ['TEXT' => TextContentObject::class, 'CASE' => CaseContentObject::class, ]);
-
-        $TSFE = GeneralUtility::makeInstance(TypoScriptFrontendController::class, [], 1, 0);
-        $TSFE->cObjectDepthCounter = 5;
-        $TSFE->fe_user = GeneralUtility::makeInstance(FrontendUserAuthentication::class);
-        $GLOBALS['TSFE'] = $TSFE;
-        $GLOBALS['TT'] = $this->getMockBuilder(TimeTracker::class)->disableOriginalConstructor()->getMock();
     }
 }

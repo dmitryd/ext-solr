@@ -29,7 +29,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * This class encapsulates the access to the extension configuration.
  *
- * @package ApacheSolrForTypo3\Solr\System\Configuration
  * @author Timo Hund <timo.hund@dkd.de>
  */
 class ExtensionConfiguration
@@ -108,7 +107,15 @@ class ExtensionConfiguration
      */
     public function getIsAllowLegacySiteModeEnabled(): bool
     {
-        return (bool)$this->getConfigurationOrDefaultValue('allowLegacySiteMode', false);
+        trigger_error('solr:deprecation: Method getIsAllowLegacySiteModeEnabled is deprecated since EXT:solr 11 and will be removed in 12. Since EXT:solr 10 legacy site handling is deprecated and was removed in EXT:solr 11.', E_USER_DEPRECATED);
+
+        //@todo throw exception if set to true and log deprecation
+        $legacyModeIsActive = $this->getConfigurationOrDefaultValue('allowLegacySiteMode', false);
+        if($legacyModeIsActive === true) {
+            throw new \InvalidArgumentException("Legacy mode is not supported anymore, please migrate your system to use sitehandling now!");
+        }
+
+        return false;
     }
 
     /**

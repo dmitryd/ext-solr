@@ -23,7 +23,6 @@ use ApacheSolrForTypo3\Solr\System\Solr\ResponseAdapter;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\Facets\QueryGroupFacet
  */
 class QueryGroupFacetParser extends AbstractFacetParser
 {
@@ -81,7 +80,7 @@ class QueryGroupFacetParser extends AbstractFacetParser
                     $facetName,
                     $facetConfiguration
                 );
-                $facet->addOption(new Option($facet, $label, $value, $count, $isOptionsActive));
+                $facet->addOption($this->objectManager->get(Option::class, $facet, $label, $value, $count, $isOptionsActive));
             }
         }
 

@@ -20,7 +20,6 @@ use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSet;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\Facets\OptionsFacet
  */
 abstract class AbstractFacet
 {
@@ -75,6 +74,11 @@ abstract class AbstractFacet
     protected $allRequirementsMet = true;
 
     /**
+     * @var \TYPO3\CMS\Extbase\Object\ObjectManagerInterface
+     */
+    protected $objectManager;
+
+    /**
      * AbstractFacet constructor.
      *
      * @param SearchResultSet $resultSet
@@ -90,6 +94,16 @@ abstract class AbstractFacet
         $this->field = $field;
         $this->label = $label;
         $this->configuration = $configuration;
+    }
+
+    /**
+     * Injects the object manager
+     *
+     * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
+     */
+    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager)
+    {
+        $this->objectManager = $objectManager;
     }
 
     /**

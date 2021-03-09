@@ -28,6 +28,7 @@ use ApacheSolrForTypo3\Solr\AbstractDataHandlerListener;
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper\ConfigurationAwareRecordService;
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper\MountPagesUpdater;
 use ApacheSolrForTypo3\Solr\Domain\Index\Queue\RecordMonitor\Helper\RootPageResolver;
+use ApacheSolrForTypo3\Solr\FrontendEnvironment;
 use ApacheSolrForTypo3\Solr\GarbageCollector;
 use ApacheSolrForTypo3\Solr\System\Configuration\ExtensionConfiguration;
 use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
@@ -38,6 +39,7 @@ use ApacheSolrForTypo3\Solr\Util;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
  * A class that monitors changes to records so that the changed record gets
@@ -86,6 +88,11 @@ class RecordMonitor extends AbstractDataHandlerListener
     protected $logger = null;
 
     /**
+     * @var FrontendEnvironment
+     */
+    protected $frontendEnvironment = null;
+
+    /**
      * RecordMonitor constructor.
      *
      * @param Queue|null $indexQueue
@@ -96,7 +103,16 @@ class RecordMonitor extends AbstractDataHandlerListener
      * @param SolrLogManager|null $solrLogManager
      * @param ConfigurationAwareRecordService|null $recordService
      */
-    public function __construct(Queue $indexQueue = null, MountPagesUpdater $mountPageUpdater = null, TCAService $TCAService = null, RootPageResolver $rootPageResolver = null, PagesRepository $pagesRepository = null, SolrLogManager $solrLogManager = null, ConfigurationAwareRecordService $recordService = null)
+    public function __construct(
+        Queue $indexQueue = null,
+        MountPagesUpdater $mountPageUpdater = null,
+        TCAService $TCAService = null,
+        RootPageResolver $rootPageResolver = null,
+        PagesRepository $pagesRepository = null,
+        SolrLogManager $solrLogManager = null,
+        ConfigurationAwareRecordService $recordService = null,
+        FrontendEnvironment $frontendEnvironment = null
+    )
     {
         parent::__construct($recordService);
         $this->indexQueue = $indexQueue ?? GeneralUtility::makeInstance(Queue::class);
@@ -105,6 +121,7 @@ class RecordMonitor extends AbstractDataHandlerListener
         $this->rootPageResolver = $rootPageResolver ?? GeneralUtility::makeInstance(RootPageResolver::class);
         $this->pagesRepository = $pagesRepository ?? GeneralUtility::makeInstance(PagesRepository::class);
         $this->logger = $solrLogManager ?? GeneralUtility::makeInstance(SolrLogManager::class, /** @scrutinizer ignore-type */ __CLASS__);
+        $this->frontendEnvironment = $frontendEnvironment ?? GeneralUtility::makeInstance(FrontendEnvironment::class);
     }
 
     /**
@@ -118,12 +135,21 @@ class RecordMonitor extends AbstractDataHandlerListener
     /**
      * Holds the configuration when a recursive page queing should be triggered.
      *
+     * Note: The SQL transaction is already committed, so the current state covers only "non"-changed fields.
+     * 
      * @var array
      * @return array
      */
     protected function getUpdateSubPagesRecursiveTriggerConfiguration()
     {
         return [
+            // the current page has the both fields "extendToSubpages" and "hidden" set from 1 to 0 => requeue subpages
+            'HiddenAndExtendToSubpageWereDisabled' => [
+                'changeSet' => [
+                    'hidden' => '0',
+                    'extendToSubpages' => '0'
+                ]
+            ],
             // the current page has the field "extendToSubpages" enabled and the field "hidden" was set to 0 => requeue subpages
             'extendToSubpageEnabledAndHiddenFlagWasRemoved' => [
                 'currentState' =>  ['extendToSubpages' => '1'],
@@ -278,7 +304,7 @@ class RecordMonitor extends AbstractDataHandlerListener
             return;
         }
 
-        if ($status === 'new') {
+        if ($status === 'new' && !MathUtility::canBeInterpretedAsInteger($recordUid)) {
             $recordUid = $tceMain->substNEWwithIDs[$recordUid];
         }
         if ($this->isDraftRecord($table, $recordUid)) {
@@ -335,54 +361,63 @@ class RecordMonitor extends AbstractDataHandlerListener
      */
     protected function processRecord($recordTable, $recordPageId, $recordUid, $fields)
     {
-        $configurationPageId = $this->getConfigurationPageId($recordTable, $recordPageId, $recordUid);
-
-        if ($configurationPageId === 0) {
-            // when the monitored record doesn't belong to a solr configured root-page and no alternative
-            // siteroot can be found this is not a relevant record
-            return;
-        }
-
-        $solrConfiguration = $this->getSolrConfigurationFromPageId($configurationPageId);
-        $isMonitoredRecord = $solrConfiguration->getIndexQueueIsMonitoredTable($recordTable);
-
-        if (!$isMonitoredRecord) {
-            // when it is a non monitored record, we can skip it.
-            return;
-        }
-
-        $record = $this->configurationAwareRecordService->getRecord($recordTable, $recordUid, $solrConfiguration);
-
-        if (empty($record)) {
-            // TODO move this part to the garbage collector
-            // check if the item should be removed from the index because it no longer matches the conditions
-            $this->removeFromIndexAndQueueWhenItemInQueue($recordTable, $recordUid);
-            return;
-        }
-
-        // Clear existing index queue items to prevent mount point duplicates.
-        // This needs to be done before the overlay handling, because handling an overlay record should
-        // not trigger a deletion.
-        $isTranslation = !empty($record['sys_language_uid']) && $record['sys_language_uid'] !== 0;
-        if ($recordTable === 'pages' && !$isTranslation) {
-            $this->indexQueue->deleteItem('pages', $recordUid);
-        }
-
-        // only update/insert the item if we actually found a record
-        $isLocalizedRecord = $this->tcaService->isLocalizedRecord($recordTable, $record);
-        $recordUid = $this->tcaService->getTranslationOriginalUidIfTranslated($recordTable, $record, $recordUid);
-
-        if ($isLocalizedRecord && !$this->getIsTranslationParentRecordEnabled($recordTable, $recordUid)) {
-            // we have a localized record without a visible parent record. Nothing to do.
-            return;
-        }
-
-        if ($this->tcaService->isEnabledRecord($recordTable, $record)) {
-            $this->indexQueue->updateItem($recordTable, $recordUid);
-        }
-
         if ($recordTable === 'pages') {
-            $this->doPagesPostUpdateOperations($fields, $recordUid);
+            $configurationPageId = $this->getConfigurationPageId($recordTable, $recordPageId, $recordUid);
+            if ($configurationPageId === 0) {
+                return;
+            }
+            $rootPageIds = [$configurationPageId];
+        } else {
+            try {
+                $rootPageIds = $this->rootPageResolver->getResponsibleRootPageIds($recordTable, $recordUid);
+                if (empty($rootPageIds)) {
+                    $this->removeFromIndexAndQueueWhenItemInQueue($recordTable, $recordUid);
+                    return;
+                }
+            } catch ( \InvalidArgumentException $e) {
+                $this->removeFromIndexAndQueueWhenItemInQueue($recordTable, $recordUid);
+                return;
+            }
+        }
+        foreach ($rootPageIds as $configurationPageId) {
+            $solrConfiguration = $this->getSolrConfigurationFromPageId($configurationPageId);
+            $isMonitoredRecord = $solrConfiguration->getIndexQueueIsMonitoredTable($recordTable);
+            if (!$isMonitoredRecord) {
+                // when it is a non monitored record, we can skip it.
+                continue;
+            }
+
+            $record = $this->configurationAwareRecordService->getRecord($recordTable, $recordUid, $solrConfiguration);
+            if (empty($record)) {
+                // TODO move this part to the garbage collector
+                // check if the item should be removed from the index because it no longer matches the conditions
+                $this->removeFromIndexAndQueueWhenItemInQueue($recordTable, $recordUid);
+                continue;
+            }
+            // Clear existing index queue items to prevent mount point duplicates.
+            // This needs to be done before the overlay handling, because handling an overlay record should
+            // not trigger a deletion.
+            $isTranslation = !empty($record['sys_language_uid']) && $record['sys_language_uid'] !== 0;
+            if ($recordTable === 'pages' && !$isTranslation) {
+                $this->indexQueue->deleteItem('pages', $recordUid);
+            }
+
+            // only update/insert the item if we actually found a record
+            $isLocalizedRecord = $this->tcaService->isLocalizedRecord($recordTable, $record);
+            $recordUid = $this->tcaService->getTranslationOriginalUidIfTranslated($recordTable, $record, $recordUid);
+
+            if ($isLocalizedRecord && !$this->getIsTranslationParentRecordEnabled($recordTable, $recordUid)) {
+                // we have a localized record without a visible parent record. Nothing to do.
+                continue;
+            }
+
+            if ($this->tcaService->isEnabledRecord($recordTable, $record)) {
+                $this->indexQueue->updateItem($recordTable, $recordUid);
+            }
+
+            if ($recordTable === 'pages') {
+                $this->doPagesPostUpdateOperations($fields, $recordUid);
+            }
         }
     }
 
@@ -415,8 +450,7 @@ class RecordMonitor extends AbstractDataHandlerListener
      */
     protected function getIsTranslationParentRecordEnabled($recordTable, $recordUid)
     {
-        $tableEnableFields = implode(', ', $GLOBALS['TCA'][$recordTable]['ctrl']['enablecolumns']);
-        $l10nParentRecord = (array)BackendUtility::getRecord($recordTable, $recordUid, $tableEnableFields, '', false);
+        $l10nParentRecord = (array)BackendUtility::getRecord($recordTable, $recordUid, '*', '', false);
         return $this->tcaService->isEnabledRecord($recordTable, $l10nParentRecord);
     }
 
@@ -560,8 +594,8 @@ class RecordMonitor extends AbstractDataHandlerListener
      * @param int $language
      * @return TypoScriptConfiguration
      */
-    protected function getSolrConfigurationFromPageId($pageId, $initializeTsfe = false, $language = 0)
+    protected function getSolrConfigurationFromPageId($pageId)
     {
-        return Util::getSolrConfigurationFromPageId($pageId, $initializeTsfe, $language);
+        return $this->frontendEnvironment->getSolrConfigurationFromPageId($pageId);
     }
 }

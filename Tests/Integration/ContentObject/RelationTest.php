@@ -27,10 +27,11 @@ namespace ApacheSolrForTypo3\Solr\Tests\Integration\ContentObject;
 
 
 use ApacheSolrForTypo3\Solr\ContentObject\Relation;
-use ApacheSolrForTypo3\Solr\System\Mvc\Frontend\Controller\OverriddenTypoScriptFrontendController;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
+use PHPUnit\Framework\MockObject\MockObject;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
+use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Page\PageRepository;
 
 /**
@@ -47,16 +48,18 @@ class RelationTest extends IntegrationTest
     public function canFallbackToPagesTableIfPagesLanguageOverlayTCAHasNoDefinitionForLocalColumn($fixtureName)
     {
         $this->importDataSetFromFixture($fixtureName);
-        $GLOBALS['TSFE'] = $this->getMockBuilder(OverriddenTypoScriptFrontendController::class)->disableOriginalConstructor()->getMock();
-        $GLOBALS['TSFE']->sys_page = GeneralUtility::makeInstance(PageRepository::class);
-        /* @var ContentObjectRenderer $contentObjectRenderer */
+        /* @var TypoScriptFrontendController|MockObject $tsfe */
+        $GLOBALS['TSFE'] = $tsfe = $this->getMockBuilder(TypoScriptFrontendController::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $tsfe->sys_page = GeneralUtility::makeInstance(PageRepository::class);
+        /* @var ContentObjectRenderer $contentObjectRendererMock */
         $contentObjectRendererMock = $this->getMockBuilder(ContentObjectRenderer::class)->setConstructorArgs([$GLOBALS['TSFE']])->getMock();
         $contentObjectRendererMock->currentRecord = 'pages:7';
-        $GLOBALS['TSFE']->sys_language_uid = 1;
 
         /* @var Relation $solrRelation */
-        $solrRelation = GeneralUtility::makeInstance(Relation::class);
-        $actual = $solrRelation->cObjGetSingleExt(Relation::CONTENT_OBJECT_NAME, ['localField' => 'categories'], null, $contentObjectRendererMock);
+        $solrRelation = GeneralUtility::makeInstance(Relation::class, $contentObjectRendererMock);
+        $actual = $solrRelation->render(['localField' => 'categories']);
 
         $this->assertSame('Some Category', $actual, 'Can not fallback to table "pages" on non existent column configuration in TCA for table "pages_language_overlay".');
     }

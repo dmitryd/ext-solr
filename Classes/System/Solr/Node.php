@@ -27,8 +27,6 @@ namespace ApacheSolrForTypo3\Solr\System\Solr;
 /**
  * Represent a server node of solr, in the most setups you would only have one, but sometimes
  * mulitple for reading and writing.
- *
- * @package ApacheSolrForTypo3\Solr\System\Solr
  */
 class Node {
 
@@ -189,7 +187,7 @@ class Node {
     {
         $pathWithoutLeadingAndTrailingSlashes = trim(trim($this->path), "/");
         $pathWithoutLastSegment = substr($pathWithoutLeadingAndTrailingSlashes, 0, strrpos($pathWithoutLeadingAndTrailingSlashes, "/"));
-        return '/' . $pathWithoutLastSegment . '/';
+        return ($pathWithoutLastSegment === '') ? '/' : '/' . $pathWithoutLastSegment . '/';
     }
 
     /**

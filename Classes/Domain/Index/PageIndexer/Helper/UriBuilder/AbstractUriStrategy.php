@@ -36,8 +36,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Implementations of this class are able to build an indexing url for solr page indexing.
- *
- * @package ApacheSolrForTypo3\Solr\Domain\Index\PageIndexer\Helper\UriBuilder
  */
 abstract class AbstractUriStrategy
 {
@@ -70,6 +68,11 @@ abstract class AbstractUriStrategy
         // overwriting the host
         if (!empty($overrideConfiguration['host'])) {
             $urlHelper->setHost($overrideConfiguration['host']);
+        }
+
+        // overwriting the port
+        if (!empty($overrideConfiguration['port'])) {
+            $urlHelper->setPort($overrideConfiguration['port']);
         }
 
         // setting a path if TYPO3 is installed in a sub directory

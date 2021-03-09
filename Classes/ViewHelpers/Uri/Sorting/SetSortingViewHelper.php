@@ -22,7 +22,6 @@ use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class SetSortingViewHelper extends AbstractUriViewHelper
 {
@@ -48,7 +47,7 @@ class SetSortingViewHelper extends AbstractUriViewHelper
         $sortingName = $arguments['sortingName'];
         $sortingDirection = $arguments['sortingDirection'];
         $previousRequest = static::getUsedSearchRequestFromRenderingContext($renderingContext);
-        $uri = self::getSearchUriBuilder()->getSetSortingUri($previousRequest, $sortingName, $sortingDirection);
+        $uri = self::getSearchUriBuilder($renderingContext)->getSetSortingUri($previousRequest, $sortingName, $sortingDirection);
         return $uri;
     }
 }

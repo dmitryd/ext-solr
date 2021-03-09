@@ -57,10 +57,9 @@ class Faceting implements Modifier, SearchRequestAware
     /**
      * @param FacetRegistry $facetRegistry
      */
-    public function __construct(FacetRegistry $facetRegistry = null)
+    public function __construct(FacetRegistry $facetRegistry)
     {
-        $objectManager = GeneralUtility::makeInstance(ObjectManager::class);
-        $this->facetRegistry = $facetRegistry ?? $objectManager->get(FacetRegistry::class);
+        $this->facetRegistry = $facetRegistry;
     }
 
     /**
@@ -221,7 +220,7 @@ class Faceting implements Modifier, SearchRequestAware
     {
         // format for filter URL parameter:
         // tx_solr[filter]=$facetName0:$facetValue0,$facetName1:$facetValue1,$facetName2:$facetValue2
-        $filters = array_map('urldecode', $resultParameters['filter']);
+        $filters = array_map('rawurldecode', $resultParameters['filter']);
         // $filters look like ['name:value1','name:value2','fieldname2:foo']
         $configuredFacets = $this->getFacetNamesWithConfiguredField($allFacets);
         // first group the filters by facetName - so that we can

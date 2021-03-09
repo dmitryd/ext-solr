@@ -1,33 +1,24 @@
 <?php
 
-namespace ApacheSolrForTypo3\Solr\Tests\Integration\Controller;
+/*
+ * This file is part of the TYPO3 CMS project.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ *
+ * For the full copyright and license information, please read the
+ * LICENSE.txt file that was distributed with this source code.
+ *
+ * The TYPO3 project - inspiring people to share!
+ */
 
-/***************************************************************
- *  Copyright notice
- *
- *  (c) 2010-2015 Timo Hund <timo.hund@dkd.de>
- *  All rights reserved
- *
- *  This script is part of the TYPO3 project. The TYPO3 project is
- *  free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  The GNU General Public License can be found at
- *  http://www.gnu.org/copyleft/gpl.html.
- *
- *  This script is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  This copyright notice MUST APPEAR in all copies of the script!
- ***************************************************************/
+namespace ApacheSolrForTypo3\Solr\Tests\Integration\Controller;
 
 use ApacheSolrForTypo3\Solr\IndexQueue\FrontendHelper\PageFieldMappingIndexer;
 use ApacheSolrForTypo3\Solr\System\Configuration\ConfigurationManager;
 use ApacheSolrForTypo3\Solr\Controller\SearchController;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager as ExtbaseConfigurationManager;
@@ -43,6 +34,7 @@ use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 /**
  * Integration testcase to test for the SearchController
  *
+ * (c) 2010-2015 Timo Hund <timo.hund@dkd.de>
  * @author Timo Hund
  */
 class SearchControllerTest extends AbstractFrontendControllerTest
@@ -71,9 +63,10 @@ class SearchControllerTest extends AbstractFrontendControllerTest
     public function setUp()
     {
         parent::setUp();
-        $this->fakeSingletonsForFrontendContext();
-
         $this->objectManager = GeneralUtility::makeInstance(ObjectManager::class);
+
+        $GLOBALS['LANG'] = GeneralUtility::makeInstance(LanguageService::class);
+        $this->fakeSingletonsForFrontendContext();
 
         $GLOBALS['TT'] = $this->getMockBuilder(TimeTracker::class)->disableOriginalConstructor()->getMock();
 
@@ -81,7 +74,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $this->searchController = $this->objectManager->get(SearchController::class);
         $this->searchRequest = $this->getPreparedRequest();
         $this->searchResponse = $this->getPreparedResponse();
-        $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['solr']['Indexer']['indexPageSubstitutePageDocument']['ApacheSolrForTypo3\\Solr\\IndexQueue\\FrontendHelper\\PageFieldMappingIndexer'] = PageFieldMappingIndexer::class;
+        $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['solr']['Indexer']['indexPageSubstitutePageDocument'][PageFieldMappingIndexer::class] = PageFieldMappingIndexer::class;
     }
 
     /**
@@ -95,12 +88,15 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canShowSearchForm()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
+
         $this->indexPages([1, 2]);
+
         $this->searchController->processRequest($this->searchRequest, $this->searchResponse);
         $content = $this->searchResponse->getContent();
         $this->assertContains('id="tx-solr-search-form-pi-results"', $content, 'Response did not contain search css selector');
@@ -108,12 +104,13 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canSearchForPrices()
     {
         $_GET['q'] = 'prices';
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
         $this->indexPages([1, 2, 3]);
 
         $this->searchController->processRequest($this->searchRequest, $this->searchResponse);
@@ -126,11 +123,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canDoAPaginatedSearch()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -145,11 +143,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canOpenSecondPageOfPaginatedSearch()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
         //now we jump to the second page
@@ -165,11 +164,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canGetADidYouMeanProposalForATypo()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -184,11 +184,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canAutoCorrectATypo()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -213,11 +214,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderAFacetWithFluid()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2]);
 
@@ -235,11 +237,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canDoAnInitialEmptySearchWithoutResults()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -263,11 +266,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canDoAnInitialEmptySearchWithResults()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -291,12 +295,13 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canDoAnInitialSearchWithoutResults()
     {
 
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -320,11 +325,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canDoAnInitialSearchWithResults()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -347,11 +353,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function removeOptionLinkWillBeShownWhenFacetWasSelected()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -369,11 +376,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function removeOptionLinkWillIsAlsoShownWhenAFacetIsNotInTheResponse()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -391,11 +399,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canFilterOnPageSections()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -420,6 +429,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function exceptionWillBeThrownWhenAWrongTemplateIsConfiguredForTheFacet()
     {
@@ -429,7 +439,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $this->expectExceptionMessageRegExp('#(.*The partial files.*NotFound.*|.*The Fluid template files .*NotFound.*)#');
 
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -451,11 +461,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderAScoreAnalysisWhenBackendUserIsLoggedIn()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2]);
 
@@ -472,11 +483,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canSortFacetsByLex()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $womanPages = [4,5,8];
         $menPages = [2];
@@ -513,11 +525,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canSortFacetsByOptionCountWhenNothingIsConfigured()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $womanPages = [4,5,8];
         $menPages = [2];
@@ -545,11 +558,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderQueryGroupFacet()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -568,12 +582,13 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderHierarchicalFacet()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
 
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -595,11 +610,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canFacetOnHierarchicalFacetItem()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -621,11 +637,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canFacetOnHierarchicalTextCategory()
     {
         $this->importDataSetFromFixture('can_render_path_facet_with_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3]);
         // we should have 3 documents in solr
@@ -647,11 +664,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canDefineAManualSortOrder()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $womanPages = [4,5,8];
         $menPages = [2];
@@ -689,11 +707,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canSeeTheParsedQueryWhenABackendUserIsLoggedIn()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2]);
 
@@ -710,6 +729,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function frontendWillRenderErrorMessageForSolrNotAvailableAction()
     {
@@ -718,7 +738,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         // set a wrong port where no solr is running
         $this->writeDefaultSolrTestSiteConfigurationForHostAndPort('http','localhost', 4711);
         $this->importDataSetFromFixture('can_render_error_message_when_solr_unavailable.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->searchRequest->setControllerActionName('solrNotAvailable');
         $this->searchController->processRequest($this->searchRequest, $this->searchResponse);
@@ -744,6 +764,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      * @param array $getArguments
      * @dataProvider frontendWillForwardsToErrorActionWhenSolrEndpointIsNotAvailableDataProvider
      * @test
+     * @group frontend
      */
     public function frontendWillForwardsToErrorActionWhenSolrEndpointIsNotAvailable($action, $getArguments)
     {
@@ -755,7 +776,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $this->expectExceptionCode(1476045801);
 
         $this->importDataSetFromFixture('can_render_error_message_when_solr_unavailable.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $_GET = $getArguments;
         $this->searchRequest->setControllerActionName($action);
@@ -764,11 +785,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canShowLastSearchesFromSessionInResponse()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -787,11 +809,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canChangeResultsPerPage()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -809,11 +832,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canShowLastSearchesFromDatabaseInResponse()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -839,11 +863,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canNotStoreQueyStringInLastSearchesWhenQueryDoesNotReturnAResult()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -869,11 +894,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canOverwriteAFilterWithTheFlexformSettings()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -891,11 +917,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderDateRangeFacet()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -919,11 +946,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderASecondFacetOnTheTypeField()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -948,11 +976,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canSortByMetric()
     {
         $this->importDataSetFromFixture('can_sort_by_metric.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
@@ -975,11 +1004,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function formActionIsRenderingTheForm()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $formRequest = $this->getPreparedRequest('Search','form');
         $formResponse = $this->getPreparedResponse();
@@ -991,11 +1021,12 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function searchingAndRenderingFrequentSearchesIsShowingTheTermAsFrequentSearch()
     {
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1]);
 
@@ -1010,6 +1041,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderDetailAction()
     {
@@ -1017,7 +1049,7 @@ class SearchControllerTest extends AbstractFrontendControllerTest
         $request->setArgument('documentId', '002de2729efa650191f82900ea02a0a3189dfabb/pages/1/0/0/0');
 
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->indexPages([1, 2]);
 
@@ -1027,13 +1059,14 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canRenderSearchFormOnly()
     {
         $request = $this->getPreparedRequest('Search', 'form', 'pi_search');
 
         $this->importDataSetFromFixture('can_render_search_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
 
         $this->searchController->processRequest($request, $this->searchResponse);
         $this->assertContains('id="tx-solr-search-form-pi-results"', $this->searchResponse->getContent());
@@ -1043,13 +1076,14 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      * The template root path is configured in the typoscript template to point to another folder-
      *
      * @test
+     * @group frontend
      */
     public function canRenderAsUserObjectWithCustomTemplatePath()
     {
         $_GET['q'] = '*';
 
         $this->importDataSetFromFixture('can_render_search_customTemplate.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
         $this->searchRequest->setArgument('resultsPerPage', 5);
         $this->searchController->processRequest($this->searchRequest, $this->searchResponse);
@@ -1061,13 +1095,14 @@ class SearchControllerTest extends AbstractFrontendControllerTest
 
     /**
      * @test
+     * @group frontend
      */
     public function canPassCustomSettingsToView()
     {
-        GeneralUtility::_GETset('q', '*');
+        $_GET['q'] = '*';
 
         $this->importDataSetFromFixture('can_render_search_customTemplate.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
 
@@ -1090,12 +1125,13 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      * Only the entry template points to a different file.
      *
      * @test
+     * @group frontend
      */
     public function canRenderAsUserObjectWithCustomTemplateInTypoScript()
     {
         $_GET['q'] = '*';
         $this->importDataSetFromFixture('can_render_search_customTemplateFromTs.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
         $this->searchRequest->setArgument('resultsPerPage', 5);
         $this->searchController->processRequest($this->searchRequest, $this->searchResponse);
@@ -1179,13 +1215,14 @@ class SearchControllerTest extends AbstractFrontendControllerTest
      */
     protected function fakeSingletonsForFrontendContext()
     {
-        $configurationManagerMock = $this->getMockBuilder(ExtbaseConfigurationManager::class)->setMethods(['getContentObject'])->getMock();
-        $configurationManagerMock->expects($this->any())->method('getContentObject')->willReturn(GeneralUtility::makeInstance(ContentObjectRenderer::class));
-
         $environmentServiceMock = $this->getMockBuilder(EnvironmentService::class)->setMethods([])->disableOriginalConstructor()->getMock();
         $environmentServiceMock->expects($this->any())->method('isEnvironmentInFrontendMode')->willReturn(true);
         $environmentServiceMock->expects($this->any())->method('isEnvironmentInBackendMode')->willReturn(false);
-        $environmentServiceMock->expects($this->any())->method('isEnvironmentInCliMode')->willReturn(false);
+
+        $configurationManagerMock = $this->getMockBuilder(ExtbaseConfigurationManager::class)->setMethods(['getContentObject'])
+            ->setConstructorArgs([$this->objectManager, $environmentServiceMock])->getMock();
+
+        $configurationManagerMock->expects($this->any())->method('getContentObject')->willReturn(GeneralUtility::makeInstance(ContentObjectRenderer::class));
 
         GeneralUtility::setSingletonInstance(EnvironmentService::class, $environmentServiceMock);
         GeneralUtility::setSingletonInstance(ExtbaseConfigurationManager::class, $configurationManagerMock);

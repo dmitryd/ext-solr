@@ -1,5 +1,5 @@
 <?php
-namespace ApacheSolrForTypo3\Solr\Tests\Integration\Controller\Search;
+namespace ApacheSolrForTypo3\Solr\Tests\Integration\Controller\Backend\Search;
 
 /***************************************************************
  *  Copyright notice
@@ -28,6 +28,8 @@ use ApacheSolrForTypo3\Solr\ConnectionManager;
 use ApacheSolrForTypo3\Solr\Controller\Backend\Search\IndexAdministrationModuleController;
 use ApacheSolrForTypo3\Solr\Domain\Site\SiteRepository;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
+use ApacheSolrForTypo3\Solr\Util;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -37,12 +39,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class IndexAdministrationModuleControllerTest extends IntegrationTest
 {
-
-    /**
-     * @var ConnectionManager
-     */
-    protected $connectionManager;
-
     /**
      * @var IndexAdministrationModuleController
      */
@@ -50,11 +46,13 @@ class IndexAdministrationModuleControllerTest extends IntegrationTest
 
     public function setUp() {
         parent::setUp();
+        $GLOBALS['LANG'] = $this->getMockBuilder(LanguageService::class)->disableOriginalConstructor()->getMock();
+
         $this->writeDefaultSolrTestSiteConfiguration();
-        $this->connectionManager = GeneralUtility::makeInstance(ConnectionManager::class);
+        $connectionManager = GeneralUtility::makeInstance(ConnectionManager::class);
 
         $this->controller = $this->getMockBuilder(IndexAdministrationModuleController::class)->setMethods(['addFlashMessage', 'redirect'])->getMock();
-        $this->controller->setSolrConnectionManager($this->connectionManager);
+        $this->controller->setSolrConnectionManager($connectionManager);
     }
 
     /**
@@ -70,7 +68,7 @@ class IndexAdministrationModuleControllerTest extends IntegrationTest
         $this->controller->setSelectedSite($selectedSite);
         $this->controller->expects($this->exactly(1))
             ->method('addFlashMessage')
-            ->with('Core configuration reloaded (core_en, core_de, core_da).','',FlashMessage::OK);
+            ->with('Core configuration reloaded (core_en, core_de, core_da).', '', FlashMessage::OK);
         $this->controller->reloadIndexConfigurationAction();
     }
 
@@ -87,7 +85,7 @@ class IndexAdministrationModuleControllerTest extends IntegrationTest
         $this->controller->setSelectedSite($selectedSite);
         $this->controller->expects($this->once())
             ->method('addFlashMessage')
-            ->with('Index emptied for Site ", Root Page ID: 1" (core_en, core_de, core_da).','',FlashMessage::OK);
+            ->with('Index emptied for Site ", Root Page ID: 1" (core_en, core_de, core_da).', '', FlashMessage::OK);
 
         $this->controller->emptyIndexAction();
     }

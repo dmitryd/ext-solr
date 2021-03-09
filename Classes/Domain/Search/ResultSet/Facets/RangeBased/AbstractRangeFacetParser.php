@@ -19,11 +19,10 @@ use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSet;
 use ApacheSolrForTypo3\Solr\System\Solr\ParsingUtil;
 
 /**
- * Class NumericRangeFacetParser
+ * Class AbstractRangeFacetParser
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\Facets
  */
 abstract class AbstractRangeFacetParser extends AbstractFacetParser
 {
@@ -65,7 +64,7 @@ abstract class AbstractRangeFacetParser extends AbstractFacetParser
 
             foreach ($countsFromResponse as $rangeCountValue => $count) {
                 $rangeCountValue = $this->parseResponseValue($rangeCountValue);
-                $rangeCount = new $facetRangeCountClass($rangeCountValue, $count);
+                $rangeCount = $this->objectManager->get($facetRangeCountClass, $rangeCountValue, $count);
                 $rangeCounts[] = $rangeCount;
                 $allCount += $count;
             }
@@ -87,7 +86,7 @@ abstract class AbstractRangeFacetParser extends AbstractFacetParser
             $type = isset($facetConfiguration['type']) ? $facetConfiguration['type'] : 'numericRange';
             $gap = isset($facetConfiguration[$type . '.']['gap']) ? $facetConfiguration[$type . '.']['gap'] : 1;
 
-            $range = new $facetItemClass($facet, $from, $to, $fromInResponse, $toInResponse, $gap, $allCount, $rangeCounts, true);
+            $range = $this->objectManager->get($facetItemClass, $facet, $from, $to, $fromInResponse, $toInResponse, $gap, $allCount, $rangeCounts, true);
             $facet->setRange($range);
         }
 

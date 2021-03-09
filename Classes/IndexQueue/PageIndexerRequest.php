@@ -40,6 +40,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class PageIndexerRequest
 {
 
+    const SOLR_INDEX_HEADER = 'X-Tx-Solr-Iq';
+
     /**
      * List of actions to perform during page rendering.
      *
@@ -231,7 +233,7 @@ class PageIndexerRequest
         $headers = $this->header;
         $headers[] = 'User-Agent: ' . $this->getUserAgent();
         $itemId = $this->indexQueueItem->getIndexQueueUid();
-        $pageId = $this->indexQueueItem->getRecordPageId();
+        $pageId = $this->indexQueueItem->getRecordUid();
 
         $indexerRequestData = [
             'requestId' => $this->requestId,
@@ -246,7 +248,7 @@ class PageIndexerRequest
         ];
 
         $indexerRequestData = array_merge($indexerRequestData, $this->parameters);
-        $headers[] = 'X-Tx-Solr-Iq: ' . json_encode($indexerRequestData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
+        $headers[] = self::SOLR_INDEX_HEADER . ': ' . json_encode($indexerRequestData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 
         return $headers;
     }

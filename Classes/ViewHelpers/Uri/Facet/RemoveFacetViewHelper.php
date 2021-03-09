@@ -19,11 +19,10 @@ use ApacheSolrForTypo3\Solr\ViewHelpers\Uri\AbstractUriViewHelper;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
 /**
- * Class FacetAddOptionViewHelper
+ * Class RemoveFacetViewHelper
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class RemoveFacetViewHelper extends AbstractUriViewHelper
 {
@@ -48,7 +47,7 @@ class RemoveFacetViewHelper extends AbstractUriViewHelper
         /** @var  $facet AbstractFacet */
         $facet = $arguments['facet'];
         $previousRequest = $facet->getResultSet()->getUsedSearchRequest();
-        $uri = self::getSearchUriBuilder()->getRemoveFacetUri($previousRequest, $facet->getName());
+        $uri = self::getSearchUriBuilder($renderingContext)->getRemoveFacetUri($previousRequest, $facet->getName());
         return $uri;
     }
 }

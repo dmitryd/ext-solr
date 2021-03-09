@@ -81,17 +81,18 @@ class SuggestControllerTest extends AbstractFrontendControllerTest
         $this->suggestRequest = $this->getPreparedRequest('Suggest', 'suggest');
         $this->suggestResponse = $this->getPreparedResponse();
 
-        $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['solr']['Indexer']['indexPageSubstitutePageDocument']['ApacheSolrForTypo3\\Solr\\IndexQueue\\FrontendHelper\\PageFieldMappingIndexer'] = PageFieldMappingIndexer::class;
+        $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['solr']['Indexer']['indexPageSubstitutePageDocument'][PageFieldMappingIndexer::class] = PageFieldMappingIndexer::class;
 
     }
 
     /**
      * @test
+     * @group frontend
      */
     public function canDoABasicSuggest()
     {
         $this->importDataSetFromFixture('can_render_suggest_controller.xml');
-        $GLOBALS['TSFE'] = $this->getConfiguredTSFE([], 1);
+        $GLOBALS['TSFE'] = $this->getConfiguredTSFE(1);
         $this->indexPages([1, 2, 3, 4, 5, 6, 7, 8]);
 
         $this->suggestRequest->setArgument('queryString', 'Sweat');

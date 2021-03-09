@@ -62,7 +62,7 @@ class Typo3PageContentExtractor extends HtmlContentExtractor
     {
         preg_match_all('/<!--\s*?TYPO3SEARCH_begin\s*?-->.*?<!--\s*?TYPO3SEARCH_end\s*?-->/mis',
             $html, $indexableContents);
-        $indexableContent = implode($indexableContents[0], '');
+        $indexableContent = implode('', $indexableContents[0]);
 
         $indexableContent = $this->excludeContentByClass($indexableContent);
         if (empty($indexableContent) && $this->getConfiguration()->getLoggingIndexingMissingTypo3SearchMarkers()) {
@@ -134,7 +134,7 @@ class Typo3PageContentExtractor extends HtmlContentExtractor
         // clean content
         $content = self::cleanContent($content);
         $content = trim($content);
-        $content = preg_replace('!\s+!', ' ', $content); // reduce multiple spaces to one space
+        $content = preg_replace('!\s+!u', ' ', $content); // reduce multiple spaces to one space
 
         return $content;
     }

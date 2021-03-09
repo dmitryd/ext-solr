@@ -26,7 +26,6 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers
  */
 class SearchFormViewHelper extends AbstractSolrFrontendTagBasedViewHelper
 {
@@ -152,7 +151,7 @@ class SearchFormViewHelper extends AbstractSolrFrontendTagBasedViewHelper
     {
         $searchParameters = [];
         if ($this->getTypoScriptConfiguration()->getSearchKeepExistingParametersForNewSearches()) {
-            $arguments = GeneralUtility::_GPmerged('tx_solr');
+            $arguments = GeneralUtility::_GPmerged($this->getTypoScriptConfiguration()->getSearchPluginNamespace());
             unset($arguments['q'], $arguments['id'], $arguments['L']);
             $searchParameters = $this->translateSearchParametersToInputTagAttributes($arguments);
         }
@@ -226,6 +225,7 @@ class SearchFormViewHelper extends AbstractSolrFrontendTagBasedViewHelper
         $pluginNamespace = $this->getTypoScriptConfiguration()->getSearchPluginNamespace();
         $suggestUrl = $uriBuilder->reset()->setTargetPageUid($pageUid)->setTargetPageType($this->arguments['suggestPageType'])->setUseCacheHash(false)->setArguments([$pluginNamespace => ['additionalFilters' => $additionalFilters]])->build();
 
+        /* @var UrlHelper $urlService */
         $urlService = GeneralUtility::makeInstance(UrlHelper::class, $suggestUrl);
         $suggestUrl = $urlService->removeQueryParameter('cHash')->getUrl();
 
@@ -242,15 +242,15 @@ class SearchFormViewHelper extends AbstractSolrFrontendTagBasedViewHelper
         $uri = $uriBuilder
             ->reset()
             ->setTargetPageUid($pageUid)
-            ->setTargetPageType($this->arguments['pageType'])
-            ->setNoCache($this->arguments['noCache'])
+            ->setTargetPageType($this->arguments['pageType'] ?? 0)
+            ->setNoCache($this->arguments['noCache'] ?? false)
             ->setUseCacheHash(!$this->arguments['noCacheHash'])
-            ->setArguments($this->arguments['additionalParams'])
-            ->setCreateAbsoluteUri($this->arguments['absolute'])
-            ->setAddQueryString($this->arguments['addQueryString'])
-            ->setArgumentsToBeExcludedFromQueryString($this->arguments['argumentsToBeExcludedFromQueryString'])
+            ->setArguments($this->arguments['additionalParams'] ?? [])
+            ->setCreateAbsoluteUri($this->arguments['absolute'] ?? false)
+            ->setAddQueryString($this->arguments['addQueryString'] ?? false)
+            ->setArgumentsToBeExcludedFromQueryString($this->arguments['argumentsToBeExcludedFromQueryString'] ?? [])
             ->setAddQueryStringMethod($this->arguments['addQueryStringMethod'] ?? '')
-            ->setSection($this->arguments['section'])
+            ->setSection($this->arguments['section'] ?? '')
             ->build();
         return $uri;
     }

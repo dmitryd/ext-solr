@@ -22,7 +22,6 @@ use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class CurrentSearchViewHelper extends AbstractUriViewHelper
 {
@@ -36,7 +35,7 @@ class CurrentSearchViewHelper extends AbstractUriViewHelper
     public static function renderStatic(array $arguments, \Closure $renderChildrenClosure, RenderingContextInterface $renderingContext)
     {
         $previousRequest = static::getUsedSearchRequestFromRenderingContext($renderingContext);
-        $uri = self::getSearchUriBuilder()->getCurrentSearchUri($previousRequest);
+        $uri = self::getSearchUriBuilder($renderingContext)->getCurrentSearchUri($previousRequest);
         return $uri;
     }
 }

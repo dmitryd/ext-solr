@@ -1,31 +1,18 @@
 <?php
 namespace ApacheSolrForTypo3\Solr\System\Configuration;
 
-/***************************************************************
- *  Copyright notice
+/*
+ * This file is part of the TYPO3 CMS project.
  *
- *  (c) 2016 Timo Schmidt <timo.schmidt@dkd.de>
- *  All rights reserved
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
  *
- *  This script is part of the TYPO3 project. The TYPO3 project is
- *  free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 3 of the License, or
- *  (at your option) any later version.
+ * For the full copyright and license information, please read the
+ * LICENSE.txt file that was distributed with this source code.
  *
- *  The GNU General Public License can be found at
- *  http://www.gnu.org/copyleft/gpl.html.
- *  A copy is found in the textfile GPL.txt and important notices to the license
- *  from the author is found in LICENSE.txt distributed with these scripts.
- *
- *
- *  This script is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  This copyright notice MUST APPEAR in all copies of the script!
- ***************************************************************/
+ * The TYPO3 project - inspiring people to share!
+ */
 
 use ApacheSolrForTypo3\Solr\IndexQueue\Indexer;
 use ApacheSolrForTypo3\Solr\IndexQueue\Initializer\Record;
@@ -59,6 +46,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *
  * @author Marc Bastian Heinrichs <mbh@mbh-software.de>
  * @author Timo Schmidt <timo.schmidt@dkd.de>
+ * @copyright (c) 2016 Timo Schmidt <timo.schmidt@dkd.de>
  */
 class TypoScriptConfiguration
 {
@@ -76,7 +64,7 @@ class TypoScriptConfiguration
     /**
      * @var ContentObjectService
      */
-    protected $contentObjectService;
+    protected $contentObjectService = null;
 
     /**
      * @param array $configuration
@@ -87,7 +75,7 @@ class TypoScriptConfiguration
     {
         $this->configurationAccess = new ArrayAccessor($configuration, '.', true);
         $this->contextPageId = $contextPageId;
-        $this->contentObjectService = $contentObjectService ?? GeneralUtility::makeInstance(ContentObjectService::class);
+        $this->contentObjectService = $contentObjectService;
     }
 
     /**
@@ -902,183 +890,6 @@ class TypoScriptConfiguration
     }
 
     /**
-     * Returns true or false if something is configured below plugin.tx_solr.solr.
-     *
-     * plugin.tx_solr.solr.
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param boolean $defaultIfEmpty
-     * @return boolean
-     */
-    public function getSolrHasConnectionConfiguration($defaultIfEmpty = false)
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $configuration = $this->getObjectByPathOrDefault('plugin.tx_solr.solr.', []);
-        return $configuration !== [] ? true : $defaultIfEmpty;
-    }
-
-    /**
-     * Returns the defaultTimeout used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.timeout
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param int $defaultIfEmpty
-     * @return int
-     */
-    public function getSolrTimeout($defaultIfEmpty = 0, $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.timeout';
-        $fallbackPath = 'plugin.tx_solr.solr.timeout';
-        $result = (int)$this->getValueByPathOrDefaultValue($scopePath, -1);
-        if($result !== -1) {
-            return $result;
-        }
-
-        return (int)$this->getValueByPathOrDefaultValue($fallbackPath, $defaultIfEmpty);
-    }
-
-    /**
-     * Returns the scheme used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.scheme
-     *
-     * Applies stdWrap on the configured setting
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param string $defaultIfEmpty
-     * @param string $scope read or write, read by default
-     * @return string
-     */
-    public function getSolrScheme($defaultIfEmpty = 'http', $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.scheme';
-        $fallbackPath = 'plugin.tx_solr.solr.scheme';
-
-        return $this->getValueByPathWithFallbackOrDefaultValueAndApplyStdWrap($scopePath, $fallbackPath, $defaultIfEmpty);
-    }
-
-    /**
-     * Returns the hostname used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.host
-     *
-     * Applies stdWrap on the configured setting
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param string $defaultIfEmpty
-     * @param string $scope read or write, read by default
-     * @return string
-     */
-    public function getSolrHost($defaultIfEmpty = 'localhost', $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.host';
-        $fallbackPath = 'plugin.tx_solr.solr.host';
-
-        return $this->getValueByPathWithFallbackOrDefaultValueAndApplyStdWrap($scopePath, $fallbackPath, $defaultIfEmpty);
-    }
-
-    /**
-     * Returns the port used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.port
-     *
-     * Applies stdWrap on the configured setting
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param int $defaultIfEmpty
-     * @param string $scope read or write, read by default
-     * @return int
-     */
-    public function getSolrPort($defaultIfEmpty = 8983, $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.port';
-        $fallbackPath = 'plugin.tx_solr.solr.port';
-
-        return (int)$this->getValueByPathWithFallbackOrDefaultValueAndApplyStdWrap($scopePath, $fallbackPath, $defaultIfEmpty);
-    }
-
-    /**
-     * Returns the path used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.path
-     *
-     * Applies stdWrap on the configured setting
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param string $defaultIfEmpty
-     * @param string $scope read or write, read by default
-     * @return string
-     */
-    public function getSolrPath($defaultIfEmpty = '/solr/core_en/', $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.path';
-        $fallbackPath = 'plugin.tx_solr.solr.path';
-
-        $solrPath =  $this->getValueByPathWithFallbackOrDefaultValueAndApplyStdWrap($scopePath, $fallbackPath, $defaultIfEmpty);
-
-        $solrPath = trim($solrPath, '/');
-        $solrPath = '/' . $solrPath . '/';
-
-        return $solrPath;
-    }
-
-    /**
-     * Returns the username used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.username
-     *
-     * Applies stdWrap on the configured setting
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param string $defaultIfEmpty
-     * @param string $scope read or write, read by default
-     * @return string
-     */
-    public function getSolrUsername($defaultIfEmpty = '', $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.username';
-        $fallbackPath = 'plugin.tx_solr.solr.username';
-
-        return $this->getValueByPathWithFallbackOrDefaultValueAndApplyStdWrap($scopePath, $fallbackPath, $defaultIfEmpty);
-    }
-
-    /**
-     * Returns the password used for requests to the Solr server
-     *
-     * plugin.tx_solr.solr.password
-     *
-     * Applies stdWrap on the configured setting
-     *
-     * @deprecated Configuring solr connections with TypoScript is deprecated please use the site handling. Will be dropped with EXT:solr 11
-     * @param string $defaultIfEmpty
-     * @param string $scope read or write, read by default
-     * @return string
-     */
-    public function getSolrPassword($defaultIfEmpty = '', $scope = 'read')
-    {
-        trigger_error('solr:deprecation: Configuring solr connections with TypoScript is deprecated please use the site handling', E_USER_DEPRECATED);
-
-        $scopePath = 'plugin.tx_solr.solr.' . $scope . '.password';
-        $fallbackPath = 'plugin.tx_solr.solr.password';
-
-        return $this->getValueByPathWithFallbackOrDefaultValueAndApplyStdWrap($scopePath, $fallbackPath, $defaultIfEmpty);
-    }
-
-    /**
      * @param $path
      * @param $fallbackPath
      * @param $defaultIfBothIsEmpty
@@ -1242,7 +1053,7 @@ class TypoScriptConfiguration
      * @param int $defaultIfEmpty
      * @return int
      */
-    public function getSearchFrequentSearchesMinSize($defaultIfEmpty = 14)
+    public function getSearchFrequentSearchesMinSize($defaultIfEmpty = 14): int
     {
         $result = $this->getValueByPathOrDefaultValue('plugin.tx_solr.search.frequentSearches.minSize', $defaultIfEmpty);
         return (int)$result;
@@ -1256,7 +1067,7 @@ class TypoScriptConfiguration
      * @param int $defaultIfEmpty
      * @return int
      */
-    public function getSearchFrequentSearchesMaxSize($defaultIfEmpty = 32)
+    public function getSearchFrequentSearchesMaxSize($defaultIfEmpty = 32): int
     {
         $result = $this->getValueByPathOrDefaultValue('plugin.tx_solr.search.frequentSearches.maxSize', $defaultIfEmpty);
         return (int)$result;
@@ -2432,7 +2243,9 @@ class TypoScriptConfiguration
         if ($configuration == null) {
             return $value;
         }
-
+        if ($this->contentObjectService === null) {
+            $this->contentObjectService = GeneralUtility::makeInstance(ContentObjectService::class);
+        }
         return $this->contentObjectService->renderSingleContentObject($value, $configuration);
     }
 }

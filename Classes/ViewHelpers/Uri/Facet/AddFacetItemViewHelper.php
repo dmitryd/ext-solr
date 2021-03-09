@@ -18,11 +18,10 @@ use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSet;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
 /**
- * Class FacetAddOptionViewHelper
+ * Class AddFacetItemViewHelper
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class AddFacetItemViewHelper extends AbstractValueViewHelper
 {
@@ -40,7 +39,7 @@ class AddFacetItemViewHelper extends AbstractValueViewHelper
         $itemValue = self::getValueFromArguments($arguments);
         $resultSet = self::getResultSetFromArguments($arguments);
         $previousRequest = $resultSet->getUsedSearchRequest();
-        $uri = self::getSearchUriBuilder()->getAddFacetValueUri($previousRequest, $name, $itemValue);
+        $uri = self::getSearchUriBuilder($renderingContext)->getAddFacetValueUri($previousRequest, $name, $itemValue);
         return $uri;
     }
 }

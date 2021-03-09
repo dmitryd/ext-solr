@@ -18,11 +18,10 @@ use ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\SearchResultSet;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
 /**
- * Class FacetAddOptionViewHelper
+ * Class RemoveFacetItemViewHelper
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class RemoveFacetItemViewHelper extends AbstractValueViewHelper
 {
@@ -41,7 +40,7 @@ class RemoveFacetItemViewHelper extends AbstractValueViewHelper
         $itemValue = self::getValueFromArguments($arguments);
         $resultSet = self::getResultSetFromArguments($arguments);
         $previousRequest = $resultSet->getUsedSearchRequest();
-        $uri = self::getSearchUriBuilder()->getRemoveFacetValueUri($previousRequest, $name, $itemValue);
+        $uri = self::getSearchUriBuilder($renderingContext)->getRemoveFacetValueUri($previousRequest, $name, $itemValue);
         return $uri;
     }
 }

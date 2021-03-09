@@ -29,8 +29,7 @@ use ApacheSolrForTypo3\Solr\System\Solr\ResponseAdapter;
 use Solarium\QueryType\Extract\Query;
 
 /**
- * Class SolrReadService
- * @package ApacheSolrForTypo3\System\Solr\Service
+ * Class SolrWriteService
  */
 class SolrWriteService extends AbstractSolrService
 {
@@ -98,7 +97,7 @@ class SolrWriteService extends AbstractSolrService
     /**
      * Add an array of Solr Documents to the index all at once
      *
-     * @param array $documents Should be an array of Apache_Solr_Document instances
+     * @param array $documents Should be an array of \ApacheSolrForTypo3\Solr\System\Solr\Document\Document instances
      * @return ResponseAdapter
      */
     public function addDocuments($documents)

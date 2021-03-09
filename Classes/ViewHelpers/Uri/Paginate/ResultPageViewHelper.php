@@ -18,11 +18,10 @@ use ApacheSolrForTypo3\Solr\ViewHelpers\Uri\AbstractUriViewHelper;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
 /**
- * Class FacetAddOptionViewHelper
+ * Class ResultPageViewHelper
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class ResultPageViewHelper extends AbstractUriViewHelper
 {
@@ -47,7 +46,7 @@ class ResultPageViewHelper extends AbstractUriViewHelper
     {
         $page = $arguments['page'];
         $previousRequest = static::getUsedSearchRequestFromRenderingContext($renderingContext);
-        $uri = self::getSearchUriBuilder()->getResultPageUri($previousRequest, $page);
+        $uri = self::getSearchUriBuilder($renderingContext)->getResultPageUri($previousRequest, $page);
         return $uri;
     }
 }

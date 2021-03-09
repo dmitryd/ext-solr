@@ -24,7 +24,6 @@ use TYPO3Fluid\Fluid\Core\Compiler\TemplateCompiler;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers
  */
 class TranslateViewHelper extends CoreTranslateViewHelper
 {
@@ -59,7 +58,7 @@ class TranslateViewHelper extends CoreTranslateViewHelper
     {
         $result = LocalizationUtility::translate($id, $extensionName, $arguments, $languageKey, $alternativeLanguageKeys);
         $result = self::replaceTranslationPrefixesWithAtWithStringMarker($result);
-        $result = vsprintf($result, $arguments['arguments']);
+        $result = vsprintf($result, $arguments);
         return $result;
     }
 

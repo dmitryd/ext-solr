@@ -90,7 +90,7 @@ class StatisticsWriterProcessor implements SearchResultSetProcessor
             'tstamp' => $this->getTime(),
             'language' => Util::getLanguageUid(),
             // @extensionScannerIgnoreLine
-            'num_found' => isset($response->response->numFound) ? (int)$response->response->numFound : 0,
+            'num_found' => (int)$resultSet->getAllResultCount(),
             'suggestions_shown' => is_object($response->spellcheck->suggestions) ? (int)get_object_vars($response->spellcheck->suggestions) : 0,
             // @extensionScannerIgnoreLine
             'time_total' => isset($response->debug->timing->time) ? $response->debug->timing->time : 0,
@@ -99,7 +99,7 @@ class StatisticsWriterProcessor implements SearchResultSetProcessor
             // @extensionScannerIgnoreLine
             'time_processing' => isset($response->debug->timing->process->time) ? $response->debug->timing->process->time : 0,
             'feuser_id' => (int)$TSFE->fe_user->user['uid'],
-            'cookie' => $TSFE->fe_user->id,
+            'cookie' => $TSFE->fe_user->id ?? '',
             'ip' => $this->applyIpMask((string)$this->getUserIp(), $ipMaskLength),
             'page' => (int)$page,
             'keywords' => $keywords,

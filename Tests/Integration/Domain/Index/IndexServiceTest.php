@@ -30,6 +30,7 @@ use ApacheSolrForTypo3\Solr\IndexQueue\Queue;
 use ApacheSolrForTypo3\Solr\System\Environment\CliEnvironment;
 use ApacheSolrForTypo3\Solr\System\Environment\WebRootAllReadyDefinedException;
 use ApacheSolrForTypo3\Solr\Tests\Integration\IntegrationTest;
+use ApacheSolrForTypo3\Solr\Util;
 use Nimut\TestingFramework\Exception\Exception;
 use ReflectionException;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;

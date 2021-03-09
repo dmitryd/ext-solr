@@ -110,11 +110,6 @@ interface SiteInterface
      */
     public function getTitle();
 
-    /**
-     * @param int $languageUid
-     * @return array
-     */
-    public function getFallbackOrder(int $languageUid): array;
 
     /**
      * @param int $language
@@ -128,4 +123,6 @@ interface SiteInterface
      * @throws NoSolrConnectionFoundException
      */
     public function getAllSolrConnectionConfigurations(): array;
+
+    public function isEnabled(): bool;
 }

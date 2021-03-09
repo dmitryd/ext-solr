@@ -31,9 +31,7 @@ use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\Domain\Search\Uri
  */
-
 class SearchUriBuilder
 {
 
@@ -321,17 +319,17 @@ class SearchUriBuilder
             $uriCacheTemplate = self::$preCompiledLinks[$hash];
         } else {
             self::$missCount++;
-            $this->uriBuilder->setTargetPageUid($pageUid);
+            $this->uriBuilder->reset()->setTargetPageUid($pageUid);
             $uriCacheTemplate = $this->uriBuilder->setArguments($structure)->setUseCacheHash(false)->build();
 
             // even if we call build with disabled cHash in TYPO3 9 a cHash will be generated when site management is active
             // to prevent wrong cHashes we remove the cHash here from the cached uri template.
             // @todo: This can be removed when https://forge.typo3.org/issues/87120 is resolved and we can ship a proper configuration
+            /* @var UrlHelper $urlHelper */
             $urlHelper = GeneralUtility::makeInstance(UrlHelper::class, $uriCacheTemplate);
             $urlHelper->removeQueryParameter('cHash');
-            $uriCacheTemplate = $urlHelper->getUrl();
 
-            self::$preCompiledLinks[$hash] = $uriCacheTemplate;
+            self::$preCompiledLinks[$hash] = (string)$urlHelper;
         }
 
         $keys = array_map(function($value) {

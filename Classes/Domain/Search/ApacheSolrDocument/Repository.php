@@ -39,7 +39,7 @@ use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Class ApacheSolrDocumentRepository uses connection to Solr Server
+ * Class Repository
  */
 class Repository implements SingletonInterface
 {
@@ -79,7 +79,7 @@ class Repository implements SingletonInterface
     }
 
     /**
-     * Returns firs found Apache_Solr_Document for current page by given language id.
+     * Returns firs found \ApacheSolrForTypo3\Solr\System\Solr\Document\Document for current page by given language id.
      *
      * @param $languageId
      * @return Document|false
@@ -91,7 +91,7 @@ class Repository implements SingletonInterface
     }
 
     /**
-     * Returns all found Apache_Solr_Document[] by given page id and language id.
+     * Returns all found \ApacheSolrForTypo3\Solr\System\Solr\Document\Document[] by given page id and language id.
      * Returns empty array if nothing found, e.g. if no language or no page(or no index for page) is present.
      *
      * @param int $pageId

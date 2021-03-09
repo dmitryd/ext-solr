@@ -81,6 +81,13 @@ class IndexerTest extends IntegrationTest
 
     }
 
+    public function tearDown()
+    {
+        parent::tearDown();
+        $this->cleanUpSolrServerAndAssertEmpty();
+        unset($this->indexQueue, $this->indexer);
+    }
+
     /**
      * This testcase should check if we can queue an custom record with MM relations.
      *
@@ -155,8 +162,13 @@ class IndexerTest extends IntegrationTest
         $this->waitToBeVisibleInSolr('core_de');
         $solrContent = file_get_contents($this->getSolrConnectionUriAuthority() . '/solr/core_de/select?q=*:*');
         $this->assertContains('"numFound":2', $solrContent, 'Could not find translated record in solr document into solr');
-        $this->assertContains('"title":"translation"', $solrContent, 'Could not index  translated document into solr');
-        $this->assertContains('"title":"translation2"', $solrContent, 'Could not index  translated document into solr');
+        if ($fixture === 'can_index_custom_translated_record_without_l_param_and_content_fallback.xml') {
+            $this->assertContains('"title":"original"', $solrContent, 'Could not index  translated document into solr');
+            $this->assertContains('"title":"original2"', $solrContent, 'Could not index  translated document into solr');
+        } else {
+            $this->assertContains('"title":"translation"', $solrContent, 'Could not index  translated document into solr');
+            $this->assertContains('"title":"translation2"', $solrContent, 'Could not index  translated document into solr');
+        }
         $this->assertContains('"url":"http://testone.site/de/?tx_foo%5Buid%5D=88', $solrContent, 'Can not build typolink as expected');
         $this->assertContains('"url":"http://testone.site/de/?tx_foo%5Buid%5D=777', $solrContent, 'Can not build typolink as expected');
 
@@ -249,7 +261,7 @@ class IndexerTest extends IntegrationTest
         $this->importExtTablesDefinition('fake_extension2_table.sql');
         $GLOBALS['TCA']['tx_fakeextension_domain_model_bar'] = include($this->getFixturePathByName('fake_extension2_bar_tca.php'));
         $GLOBALS['TCA']['tx_fakeextension_domain_model_mmrelated'] = include($this->getFixturePathByName('fake_extension2_mmrelated_tca.php'));
-        $this->importDataSetFromFixture('can_index_custom_record_with_mulitple_mm_relations.xml');
+        $this->importDataSetFromFixture('can_index_custom_record_with_multiple_mm_relations.xml');
 
         $result = $this->addToQueueAndIndexRecord('tx_fakeextension_domain_model_bar', 88);
         $this->assertTrue($result, 'Indexing was not indicated to be successful');
@@ -262,9 +274,9 @@ class IndexerTest extends IntegrationTest
         // @extensionScannerIgnoreLine
         $tags = $decodedSolrContent->response->docs[0]->tags_stringM;
 
-        $this->assertSame(["the tag","the second tag"], $tags, $solrContent, 'Did not find MM related tags');
+        $this->assertSame(['the tag', 'another tag'], $tags, $solrContent, 'Did not find MM related tags');
         $this->assertContains('"numFound":1', $solrContent, 'Could not index document into solr');
-        $this->assertContains('"title":"the document"', $solrContent, 'Could not index document into solr');
+        $this->assertContains('"title":"testnews"', $solrContent, 'Could not index document into solr');
 
         $this->cleanUpSolrServerAndAssertEmpty('core_en');
     }
@@ -610,5 +622,59 @@ class IndexerTest extends IntegrationTest
         $this->assertInstanceOf(SolrConnection::class, $result[1], "Expect SolrConnection object in connection array item with key 1.");
         $this->assertCount(1, $result, "Expect only one SOLR connection.");
         $this->assertArrayNotHasKey(0, $result, "Expect, that there is no solr connection returned for default language,");
+    }
+
+    /**
+     * @test
+     */
+    public function getSolrConnectionsByItemReturnsNoDefaultConnectionDefaultLanguageIsHiddenInSiteConfig()
+    {
+        $this->writeDefaultSolrTestSiteConfigurationForHostAndPort('http', 'localhost', 8999, true);
+        $this->importDataSetFromFixture('can_index_with_rootPage_set_to_hide_default_language.xml');
+        $itemMetaData = [
+            'uid' => 1,
+            'root' => 1,
+            'item_type' => 'pages',
+            'item_uid' => 1,
+            'indexing_configuration' => '',
+            'has_indexing_properties' => false
+        ];
+        $item = new Item($itemMetaData);
+
+        $result = $this->callInaccessibleMethod($this->indexer,'getSolrConnectionsByItem', $item);
+
+        $this->assertEmpty($result[0], 'Connection for default language was expected to be empty');
+        $this->assertInstanceOf(SolrConnection::class, $result[1], "Expect SolrConnection object in connection array item with key 1.");
+        $this->assertCount(1, $result, "Expect only one SOLR connection.");
+        $this->assertArrayNotHasKey(0, $result, "Expect, that there is no solr connection returned for default language,");
+    }
+
+    /**
+     * @test
+     */
+    public function getSolrConnectionsByItemReturnsProperItemInNestedSite()
+    {
+        $this->cleanUpSolrServerAndAssertEmpty();
+        $this->writeDefaultSolrTestSiteConfigurationForHostAndPort();
+        $this->importDataSetFromFixture('can_index_with_multiple_sites.xml');
+        $result = $this->addToQueueAndIndexRecord('pages', 1);
+        self::assertTrue($result, 'Indexing was not indicated to be successful');
+        $result = $this->addToQueueAndIndexRecord('pages', 111);
+        self::assertTrue($result, 'Indexing was not indicated to be successful');
+        $result = $this->addToQueueAndIndexRecord('pages', 120);
+        self::assertTrue($result, 'Indexing was not indicated to be successful');
+        $this->waitToBeVisibleInSolr();
+        $solrContentJson = file_get_contents($this->getSolrConnectionUriAuthority() . '/solr/core_en/select?q=*:*');
+        $solrContent = json_decode($solrContentJson, true);
+        $solrContentResponse = $solrContent['response'];
+        self::assertArrayHasKey('docs', $solrContentResponse, 'Did not find docs in solr response');
+
+        $solrDocs = $solrContentResponse['docs'];
+        self::assertCount(3, $solrDocs, 'Could not found index document into solr');
+
+        $sites = array_column($solrDocs, 'site');
+        self::assertEquals('testone.site', $sites[0]);
+        self::assertEquals('testtwo.site', $sites[1]);
+        self::assertEquals('testtwo.site', $sites[2]);
     }
 }

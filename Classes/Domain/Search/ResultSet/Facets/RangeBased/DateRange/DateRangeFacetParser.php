@@ -23,7 +23,6 @@ use ApacheSolrForTypo3\Solr\System\Data\DateTime;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\Domain\Search\ResultSet\Facets
  */
 class DateRangeFacetParser extends AbstractRangeFacetParser
 {
@@ -33,7 +32,7 @@ class DateRangeFacetParser extends AbstractRangeFacetParser
     protected $facetClass = DateRangeFacet::class;
 
     /**
-     * @var
+     * @var string
      */
     protected $facetItemClass = DateRange::class;
 

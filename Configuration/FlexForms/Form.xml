@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <T3DataStructure>
-    <meta>
-        <langDisable>1</langDisable>
-    </meta>
     <sheets>
         <sDEF>
             <ROOT>
@@ -37,6 +34,7 @@
                             <config>
                                 <section>1</section>
                                 <type>select</type>
+                                <renderType>selectSingle</renderType>
                                 <itemsProcFunc>ApacheSolrForTypo3\Solr\System\UserFunctions\FlexFormUserFunctions->getAvailableTemplates</itemsProcFunc>
                             </config>
                         </TCEforms>

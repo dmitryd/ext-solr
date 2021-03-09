@@ -23,7 +23,6 @@ use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\ViewHelpers\Link
  */
 class GroupItemPageViewHelper extends AbstractUriViewHelper
 {
@@ -50,7 +49,7 @@ class GroupItemPageViewHelper extends AbstractUriViewHelper
         $page = $arguments['page'];
         $groupItem = $arguments['groupItem'];
         $previousRequest = static::getUsedSearchRequestFromRenderingContext($renderingContext);
-        $uri = self::getSearchUriBuilder()->getResultGroupItemPageUri($previousRequest, $groupItem, (int)$page);
+        $uri = self::getSearchUriBuilder($renderingContext)->getResultGroupItemPageUri($previousRequest, $groupItem, (int)$page);
         return $uri;
     }
 }

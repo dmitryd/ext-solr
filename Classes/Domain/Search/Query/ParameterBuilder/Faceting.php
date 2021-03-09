@@ -32,8 +32,6 @@ use ApacheSolrForTypo3\Solr\System\Configuration\TypoScriptConfiguration;
 /**
  * The Faceting ParameterProvider is responsible to build the solr query parameters
  * that are needed for the highlighting.
- *
- * @package ApacheSolrForTypo3\Solr\Domain\Search\Query\ParameterBuilder
  */
 class Faceting extends AbstractDeactivatable implements ParameterBuilder
 {
@@ -49,7 +47,7 @@ class Faceting extends AbstractDeactivatable implements ParameterBuilder
     protected $minCount = 1;
 
     /**
-     * @var
+     * @var int
      */
     protected $limit = 10;
 

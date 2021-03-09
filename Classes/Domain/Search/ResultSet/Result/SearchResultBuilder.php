@@ -29,10 +29,8 @@ use ApacheSolrForTypo3\Solr\System\Solr\Document\Document;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * The SearchResultBuilder is responsible to build a SearchResult object from an Apache_Solr_Document
+ * The SearchResultBuilder is responsible to build a SearchResult object from an \ApacheSolrForTypo3\Solr\System\Solr\Document\Document
  * and should use a different class as SearchResult if configured.
- *
- * @package ApacheSolrForTypo3\Solr\Domain\Search\ResultSet
  */
 class SearchResultBuilder {
 

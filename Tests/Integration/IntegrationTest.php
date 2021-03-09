@@ -25,8 +25,8 @@ namespace ApacheSolrForTypo3\Solr\Tests\Integration;
  ***************************************************************/
 
 use ApacheSolrForTypo3\Solr\Access\Rootline;
+use ApacheSolrForTypo3\Solr\Tests\Unit\Helper\FakeObjectManager;
 use ApacheSolrForTypo3\Solr\Typo3PageIndexer;
-
 use InvalidArgumentException;
 use Nimut\TestingFramework\Exception\Exception;
 use ReflectionClass;
@@ -47,7 +47,9 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
+use TYPO3\CMS\Extbase\Object\ObjectManagerInterface;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Http\RequestHandler;
 use TYPO3\CMS\Frontend\Page\PageGenerator;
 use TYPO3\CMS\Core\Tests\Functional\SiteHandling\SiteBasedTestTrait;
 use function getenv;
@@ -67,7 +69,7 @@ abstract class IntegrationTest extends FunctionalTestCase
      */
     protected const LANGUAGE_PRESETS = [
         'EN' => ['id' => 0, 'title' => 'English', 'locale' => 'en_US.UTF8'],
-        'DE' => ['id' => 1, 'title' => 'German', 'locale' => 'de_DE.UTF8'],
+        'DE' => ['id' => 1, 'title' => 'German', 'locale' => 'de_DE.UTF8', 'fallbackType' => 'fallback', 'fallbacks' => 'EN'],
         'DA' => ['id' => 2, 'title' => 'Danish', 'locale' => 'da_DA.UTF8']
     ];
 
@@ -127,12 +129,14 @@ abstract class IntegrationTest extends FunctionalTestCase
      * Loads a Fixture from the Fixtures folder beside the current test case.
      *
      * @param $fixtureName
-     * @throws ReflectionException
-     * @throws Exception
      */
     protected function importDataSetFromFixture($fixtureName)
     {
-        $this->importDataSet($this->getFixturePathByName($fixtureName));
+        try {
+            $this->importDataSet($this->getFixturePathByName($fixtureName));
+            return;
+        } catch (\Exception $e) {}
+        $this->fail(sprintf('Can not import "%s" fixture.', $fixtureName));
     }
 
     /**
@@ -250,24 +254,17 @@ abstract class IntegrationTest extends FunctionalTestCase
     }
 
     /**
-     * Setup configured TSFE
-     *
-     * @param array $TYPO3_CONF_VARS
      * @param int $id
-     * @param int $type
-     * @param string $no_cache
-     * @param string $cHash
-     * @param null $_2
      * @param string $MP
-     * @param string $RDCT
-     * @param array $config
+     * @param $language
      * @return TypoScriptFrontendController
      */
-    protected function getConfiguredTSFE($TYPO3_CONF_VARS = [], $id = 1, $type = 0, $no_cache = '', $cHash = '', $_2 = null, $MP = '', $RDCT = '', $config = [])
+    protected function getConfiguredTSFE($id = 1, $MP = '', $language = 0)
     {
             /** @var TSFETestBootstrapper $bootstrapper */
         $bootstrapper = GeneralUtility::makeInstance(TSFETestBootstrapper::class);
-        $result = $bootstrapper->run($TYPO3_CONF_VARS, $id, $type, $no_cache, $cHash, $_2, $MP, $RDCT, $config);
+
+        $result = $bootstrapper->bootstrap($id, $MP, $language);
         return $result->getTsfe();
     }
 
@@ -393,14 +390,16 @@ abstract class IntegrationTest extends FunctionalTestCase
         $_SERVER['HTTP_HOST'] = 'test.local.typo3.org';
         $_SERVER['REQUEST_URI'] = '/search.html';
 
-        $fakeTSFE = $this->getConfiguredTSFE([], $pageId);
+        $fakeTSFE = $this->getConfiguredTSFE($pageId);
         $fakeTSFE->newCObj();
 
         $GLOBALS['TSFE'] = $fakeTSFE;
         $this->simulateFrontedUserGroups($feUserGroupArray);
 
-        $fakeTSFE->preparePageContentGeneration();
-        PageGenerator::renderContent();
+        $request = $GLOBALS['TYPO3_REQUEST'];
+        $requestHandler = GeneralUtility::makeInstance(RequestHandler::class);
+        $requestHandler->handle($request);
+
         return $fakeTSFE;
     }
 
@@ -459,18 +458,33 @@ abstract class IntegrationTest extends FunctionalTestCase
         $this->writeDefaultSolrTestSiteConfigurationForHostAndPort($solrConnectionInfo['scheme'], $solrConnectionInfo['host'], $solrConnectionInfo['port']);
     }
 
+
+    /**
+     * @var string
+     */
+    protected static $lastSiteCreated = '';
+
     /**
      * @param string $scheme
      * @param string $host
      * @param int $port
      * @return void
      */
-    protected function writeDefaultSolrTestSiteConfigurationForHostAndPort($scheme = 'http', $host = 'localhost', $port = 8999)
+    protected function writeDefaultSolrTestSiteConfigurationForHostAndPort($scheme = 'http', $host = 'localhost', $port = 8999, $disableDefaultLanguage = false)
     {
+        $siteCreatedHash = md5($scheme . $host . $port . $disableDefaultLanguage);
+        if (self::$lastSiteCreated === $siteCreatedHash) {
+            return;
+        }
+
         $defaultLanguage = $this->buildDefaultLanguageConfiguration('EN', '/en/');
         $defaultLanguage['solr_core_read'] = 'core_en';
 
-        $german = $this->buildLanguageConfiguration('DE', '/de/');
+        if ($disableDefaultLanguage === true) {
+            $defaultLanguage['enabled'] = 0;
+        }
+
+        $german = $this->buildLanguageConfiguration('DE', '/de/', ['EN'], 'fallback');
         $german['solr_core_read'] = 'core_de';
 
         $danish = $this->buildLanguageConfiguration('DA', '/da/');
@@ -498,6 +512,12 @@ abstract class IntegrationTest extends FunctionalTestCase
             ]
         );
 
+        $this->writeSiteConfiguration(
+            'integration_tree_three',
+            $this->buildSiteConfiguration(211, 'http://testthree.site/'),
+            [$defaultLanguage]
+        );
+
         $globalSolrSettings = [
             'solr_scheme_read' => $scheme,
             'solr_host_read' => $host,
@@ -508,9 +528,12 @@ abstract class IntegrationTest extends FunctionalTestCase
         ];
         $this->mergeSiteConfiguration('integration_tree_one', $globalSolrSettings);
         $this->mergeSiteConfiguration('integration_tree_two', $globalSolrSettings);
+        // disable solr for site three
+        $this->mergeSiteConfiguration('integration_tree_three', ['solr_enabled_read' => false]);
 
         clearstatcache();
         usleep(500);
+        self::$lastSiteCreated = $siteCreatedHash;
     }
 
     /**
@@ -548,5 +571,13 @@ abstract class IntegrationTest extends FunctionalTestCase
     {
         $solrConnectionInfo = $this->getSolrConnectionInfo();
         return $solrConnectionInfo['scheme'] . '://' . $solrConnectionInfo['host'] . ':' . $solrConnectionInfo['port'];
+    }
+
+    /**
+     * @return ObjectManagerInterface
+     */
+    protected function getFakeObjectManager(): ObjectManagerInterface
+    {
+        return new FakeObjectManager();
     }
 }

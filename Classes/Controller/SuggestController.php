@@ -35,7 +35,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *
  * @author Frans Saris <frans@beech.it>
  * @author Timo Hund <timo.hund@dkd.de>
- * @package ApacheSolrForTypo3\Solr\Controller
  */
 class SuggestController extends AbstractBaseController
 {
@@ -47,9 +46,8 @@ class SuggestController extends AbstractBaseController
      * @param array $additionalFilters
      * @return string
      */
-    public function suggestAction($queryString, $callback, $additionalFilters = [])
+    public function suggestAction($queryString, $callback = null, $additionalFilters = [])
     {
-        $jsonPCallback = htmlspecialchars($callback);
         // Get suggestions
         $rawQuery = htmlspecialchars(mb_strtolower(trim($queryString)));
 
@@ -72,8 +70,12 @@ class SuggestController extends AbstractBaseController
             $this->handleSolrUnavailable();
             $result = ['status' => false];
         }
-
-        return htmlspecialchars($jsonPCallback) . '(' . json_encode($result) . ')';
+        if ($callback) {
+            return htmlspecialchars($callback) . '(' . json_encode($result) . ')';
+        }
+        else {
+            return json_encode($result);
+        }
     }
 
 }

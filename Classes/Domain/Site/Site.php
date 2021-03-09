@@ -34,8 +34,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Base Clas for Typo3ManagedSite and LegacySite
- *
- * @package ApacheSolrForTypo3\Solr\Domain\Site
  */
 abstract class Site implements SiteInterface
 {
@@ -111,29 +109,6 @@ abstract class Site implements SiteInterface
     }
 
     /**
-     * Gets the site's root page language IDs (uids).
-     *
-     * @return array
-     * @deprecated use getAvailableLanguageIds()
-     * @todo check if this method is still needed (only used in tests currently)
-     */
-    public function getRootPageLanguageIds() : array
-    {
-        trigger_error('solr:deprecation: Method getRootPageLanguageIds is deprecated since EXT:solr 10 and will be removed in v11, use getAvailableLanguageIds instead', E_USER_DEPRECATED);
-
-        $rootPageLanguageIds = [];
-        $rootPageId = $this->getRootPageId();
-
-        $rootPageOverlays = $this->pagesRepository->findTranslationOverlaysByPageId($rootPageId);
-        if (count($rootPageOverlays)) {
-            foreach ($rootPageOverlays as $rootPageOverlay) {
-                $rootPageLanguageIds[] = $rootPageOverlay['sys_language_uid'];
-            }
-        }
-        return $rootPageLanguageIds;
-    }
-
-    /**
      * Gets the site's label. The label is build from the the site title and root
      * page ID (uid).
      *
@@ -194,8 +169,10 @@ abstract class Site implements SiteInterface
         // Fetch configuration in order to be able to read initialPagesAdditionalWhereClause
         $solrConfiguration = $this->getSolrConfiguration();
         $indexQueueConfigurationName = $configurationAwareRecordService->getIndexingConfigurationName('pages', $this->rootPage['uid'], $solrConfiguration);
+        if ($indexQueueConfigurationName === null) {
+            return $pageIds;
+        }
         $initialPagesAdditionalWhereClause = $solrConfiguration->getInitialPagesAdditionalWhereClause($indexQueueConfigurationName);
-
         return array_merge($pageIds, $this->pagesRepository->findAllSubPageIdsByRootPage($rootPageId, $maxDepth, $initialPagesAdditionalWhereClause));
     }
 
@@ -274,6 +251,11 @@ abstract class Site implements SiteInterface
             } catch (NoSolrConnectionFoundException $e) {}
         }
         return $configs;
+    }
+
+    public function isEnabled(): bool
+    {
+        return !empty($this->getAllSolrConnectionConfigurations());
     }
 
     /**
